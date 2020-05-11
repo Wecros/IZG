@@ -3,11 +3,20 @@
  * @brief This file contains class that represents graphic card.
  *
  * @author Tomáš Milet, imilet@fit.vutbr.cz
+ *         Marek Filip, xfilip46@stud.fit.vutbr.cz
+ * @date   2020-May-11
  */
 #pragma once
 
 #include <student/fwd.hpp>
-
+#include <iostream>           // input, output
+#include <unordered_map>      // std::unordered_map
+#include <string>             // std::string
+#include <vector>             // std::vector
+#include <SDL.h>              // SDL functions
+#include <cstring>            // std::memmove
+#include <memory>             // std::unique_ptr
+#include <array>              // std::array
 
 /**
  * @brief This class represent software GPU
@@ -65,6 +74,31 @@ class GPU{
     /// @{
     /// \todo zde si můžete vytvořit proměnné grafické karty (buffery, programy, ...)
     /// @}
+
+    struct Indexing {
+      BufferID  bufferID;
+      IndexType indexType;
+      bool      enabled;    // FIXME: remove
+    };
+
+    struct Head {
+      BufferID      bufferID;
+      uint64_t      offset;
+      uint64_t      stride;
+      AttributeType type;
+      bool          enabled;
+    };
+
+    struct VPTable {
+      struct Indexing indexing;
+      std::array<struct Head, maxAttributes> heads = {};
+    };
+  private:
+    typedef std::unordered_map<BufferID, void*> BufferMap;
+    typedef std::unordered_map<VertexPullerID, std::unique_ptr<VPTable>> VPMap;
+    // typedef std::unordered_map<VertexPullerID, VPTable*> VPMap;
+
+    BufferMap buffers;
+    VPMap vertexPullers;
+    VertexPullerID activeVP;
 };
-
-

@@ -3,6 +3,8 @@
  * @brief This file contains phong rendering method
  *
  * @author Tomáš Milet, imilet@fit.vutbr.cz
+ *         Marek Filip, xfilip46@stud.fit.vutbr.cz
+ * @date   2020-May-11
  */
 
 #pragma once

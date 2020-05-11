@@ -3,6 +3,8 @@
  * @brief This file contains implementation of gpu
  *
  * @author Tomáš Milet, imilet@fit.vutbr.cz
+ *         Marek Filip, xfilip46@stud.fit.vutbr.cz
+ * @date   2020-May-11
  */
 
 #include <student/gpu.hpp>
@@ -17,6 +19,7 @@
  */
 GPU::GPU(){
   /// \todo Zde můžete alokovat/inicializovat potřebné proměnné grafické karty
+
 }
 
 /**
@@ -24,6 +27,8 @@ GPU::GPU(){
  */
 GPU::~GPU(){
   /// \todo Zde můžete dealokovat/deinicializovat grafickou kartu
+  buffers.clear();  // does this deallocate correctly?
+  vertexPullers.clear();
 }
 
 /// @}
@@ -39,12 +44,17 @@ GPU::~GPU(){
  *
  * @return unique identificator of the buffer
  */
-BufferID GPU::createBuffer(uint64_t size) { 
+BufferID GPU::createBuffer(uint64_t size) {
   /// \todo Tato funkce by měla na grafické kartě vytvořit buffer dat.<br>
   /// Velikost bufferu je v parameteru size (v bajtech).<br>
   /// Funkce by měla vrátit unikátní identifikátor identifikátor bufferu.<br>
   /// Na grafické kartě by mělo být možné alkovat libovolné množství bufferů o libovolné velikosti.<br>
-  return emptyID; 
+  BufferID bufferID = buffers.size() + 1;
+  std::cerr << "Buffer ID:" << bufferID << std::endl;  // TODO: remove
+  void *bufferData = malloc(size);
+  buffers[bufferID] = bufferData;
+
+  return bufferID;
 }
 
 /**
@@ -56,6 +66,8 @@ void GPU::deleteBuffer(BufferID buffer) {
   /// \todo Tato funkce uvolní buffer na grafické kartě.
   /// Buffer pro smazání je vybrán identifikátorem v parameteru "buffer".
   /// Po uvolnění bufferu je identifikátor volný a může být znovu použit při vytvoření nového bufferu.
+  free(buffers[buffer]);
+  buffers.erase(buffer);
 }
 
 /**
@@ -72,15 +84,16 @@ void GPU::setBufferData(BufferID buffer, uint64_t offset, uint64_t size, void co
   /// Parametr size určuje, kolik dat (v bajtech) se překopíruje.<br>
   /// Parametr offset určuje místo v bufferu (posun v bajtech) kam se data nakopírují.<br>
   /// Parametr data obsahuje ukazatel na data na cpu pro kopírování.<br>
+  std::memmove((uint8_t *) buffers[buffer] + offset, data, size);
 }
 
 /**
  * @brief This function downloads data from GPU.
  *
  * @param buffer specfies buffer
- * @param offset specifies the offset into the buffer from which data will be returned, measured in bytes. 
+ * @param offset specifies the offset into the buffer from which data will be returned, measured in bytes.
  * @param size specifies data size that will be copied
- * @param data specifies a pointer to the location where buffer data is returned. 
+ * @param data specifies a pointer to the location where buffer data is returned.
  */
 void GPU::getBufferData(BufferID buffer,
                         uint64_t offset,
@@ -92,6 +105,7 @@ void GPU::getBufferData(BufferID buffer,
   /// Parametr size určuje kolik dat (v bajtech) se překopíruje.<br>
   /// Parametr offset určuje místo v bufferu (posun v bajtech) odkud se začne kopírovat.<br>
   /// Parametr data obsahuje ukazatel, kam se data nakopírují.<br>
+  std::memmove(data, (uint8_t *) buffers[buffer] + offset, size);
 }
 
 /**
@@ -101,11 +115,15 @@ void GPU::getBufferData(BufferID buffer,
  *
  * @return true if buffer points to existing buffer on the GPU.
  */
-bool GPU::isBuffer(BufferID buffer) { 
+bool GPU::isBuffer(BufferID buffer) {
   /// \todo Tato funkce by měla vrátit true pokud buffer je identifikátor existující bufferu.<br>
   /// Tato funkce by měla vrátit false, pokud buffer není identifikátor existujícího bufferu. (nebo bufferu, který byl smazán).<br>
   /// Pro emptyId vrací false.<br>
-  return false; 
+  if (buffers.find(buffer) != buffers.end()) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 /// @}
@@ -124,7 +142,28 @@ ObjectID GPU::createVertexPuller     (){
   /// \todo Tato funkce vytvoří novou práznou tabulku s nastavením pro vertex puller.<br>
   /// Funkce by měla vrátit identifikátor nové tabulky.
   /// Prázdná tabulka s nastavením neobsahuje indexování a všechny čtecí hlavy jsou vypnuté.
-  return emptyID;
+  VertexPullerID vao = vertexPullers.size() + 1;
+  std::cerr << "Vertex Puller ID:" << vao << std::endl;  // TODO: remove
+
+  // Initialize the table as empty
+  std::unique_ptr<VPTable> emptyTable = std::make_unique<VPTable>();
+  // VPTable *emptyTable = VPTable;
+  emptyTable->indexing.bufferID = emptyID;
+  emptyTable->indexing.indexType = IndexType::UINT8;
+  emptyTable->indexing.enabled = false;
+  for (auto head : emptyTable->heads) {
+    head.bufferID = emptyID;
+    head.offset = 0;
+    head.stride = 0;
+    head.type = AttributeType::EMPTY;
+    head.enabled = false;
+  }
+
+  std::cout << "ALLO";
+  vertexPullers[vao] = std::move(emptyTable);  // FIXME: ignore error
+  std::cout << "ALLO NOOOOOOOOOo";
+
+  return vao;
 }
 
 /**
@@ -136,6 +175,8 @@ void     GPU::deleteVertexPuller     (VertexPullerID vao){
   /// \todo Tato funkce by měla odstranit tabulku s nastavení pro vertex puller.<br>
   /// Parameter "vao" obsahuje identifikátor tabulky s nastavením.<br>
   /// Po uvolnění nastavení je identifiktátor volný a může být znovu použit.<br>
+  vertexPullers[vao].reset();
+  vertexPullers.erase(vao);
 }
 
 /**
@@ -156,6 +197,11 @@ void     GPU::setVertexPullerHead    (VertexPullerID vao,uint32_t head,Attribute
   /// Parametr "stride" nastaví krok čtecí hlavy.<br>
   /// Parametr "offset" nastaví počáteční pozici čtecí hlavy.<br>
   /// Parametr "buffer" vybere buffer, ze kterého bude čtecí hlava číst.<br>
+  auto vertexPuller = vertexPullers.find(vao);
+  if (vertexPuller != vertexPullers.end()) {
+    vertexPuller->second->heads[head] = { buffer, offset, stride, type };
+  }
+
 }
 
 /**
@@ -170,12 +216,16 @@ void     GPU::setVertexPullerIndexing(VertexPullerID vao,IndexType type,BufferID
   /// Parametr "vao" vybírá tabulku s nastavením.<br>
   /// Parametr "type" volí typ indexu, který je uložený v bufferu.<br>
   /// Parametr "buffer" volí buffer, ve kterém jsou uloženy indexy.<br>
+  auto vertexPuller = vertexPullers.find(vao);
+  if (vertexPuller != vertexPullers.end()) {
+    vertexPuller->second->indexing = { buffer, type };
+  }
 }
 
 /**
  * @brief This function enables vertex puller's head.
  *
- * @param vao vertex puller 
+ * @param vao vertex puller
  * @param head head id
  */
 void     GPU::enableVertexPullerHead (VertexPullerID vao,uint32_t head){
@@ -183,6 +233,10 @@ void     GPU::enableVertexPullerHead (VertexPullerID vao,uint32_t head){
   /// Pokud je čtecí hlava povolena, hodnoty z bufferu se budou kopírovat do atributu vrcholů vertex shaderu.<br>
   /// Parametr "vao" volí tabulku s nastavením vertex pulleru (vybírá vertex puller).<br>
   /// Parametr "head" volí čtecí hlavu.<br>
+  auto vertexPuller = vertexPullers.find(vao);
+  if (vertexPuller != vertexPullers.end()) {
+    vertexPuller->second->heads[head].enabled = true;
+  }
 }
 
 /**
@@ -195,6 +249,10 @@ void     GPU::disableVertexPullerHead(VertexPullerID vao,uint32_t head){
   /// \todo Tato funkce zakáže čtecí hlavu daného vertex pulleru.<br>
   /// Pokud je čtecí hlava zakázána, hodnoty z bufferu se nebudou kopírovat do atributu vrcholu.<br>
   /// Parametry "vao" a "head" vybírají vertex puller a čtecí hlavu.<br>
+  auto vertexPuller = vertexPullers.find(vao);
+  if (vertexPuller != vertexPullers.end()) {
+    vertexPuller->second->heads[head].enabled = false;
+  }
 }
 
 /**
@@ -205,6 +263,7 @@ void     GPU::disableVertexPullerHead(VertexPullerID vao,uint32_t head){
 void     GPU::bindVertexPuller       (VertexPullerID vao){
   /// \todo Tato funkce aktivuje nastavení vertex pulleru.<br>
   /// Pokud je daný vertex puller aktivován, atributy z bufferů jsou vybírány na základě jeho nastavení.<br>
+  activeVP = vao;
 }
 
 /**
@@ -213,6 +272,7 @@ void     GPU::bindVertexPuller       (VertexPullerID vao){
 void     GPU::unbindVertexPuller     (){
   /// \todo Tato funkce deaktivuje vertex puller.
   /// To většinou znamená, že se vybere neexistující "emptyID" vertex puller.
+  activeVP = emptyID;
 }
 
 /**
@@ -225,7 +285,11 @@ void     GPU::unbindVertexPuller     (){
 bool     GPU::isVertexPuller         (VertexPullerID vao){
   /// \todo Tato funkce otestuje, zda daný vertex puller existuje.
   /// Pokud ano, funkce vrací true.
-  return false;
+  if (vertexPullers.find(vao) != vertexPullers.end()) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 /// @}
@@ -262,7 +326,7 @@ void             GPU::deleteProgram         (ProgramID prg){
  * @brief This function attaches vertex and frament shader to shader program.
  *
  * @param prg shader program
- * @param vs vertex shader 
+ * @param vs vertex shader
  * @param fs fragment shader
  */
 void             GPU::attachShaders         (ProgramID prg,VertexShader vs,FragmentShader fs){

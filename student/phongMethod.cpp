@@ -3,6 +3,8 @@
  * @brief This file contains implementation of phong rendering method
  *
  * @author Tomáš Milet, imilet@fit.vutbr.cz
+ *         Marek Filip, xfilip46@stud.fit.vutbr.cz
+ * @date   2020-May-11
  */
 
 #include <student/phongMethod.hpp>
@@ -18,7 +20,7 @@
  *
  * \image html images/texture.svg "Vypočet procedurální textury." width=1000
  *
- * 
+ *
  *
  *
  *
@@ -94,7 +96,7 @@ void phong_FS(OutFragment&outFragment,InFragment const&inFragment,Uniforms const
   /// V případě, že normála směřuje vodorovně nebo dolů je textura složena ze sinusových pruhů.
   /// Bílá textura a textura sinusových pruhů je lineráně míchana pomocí interpolačního parameteru t.
   /// Interpolační parameter t spočtěte z y komponenty normály pomocí t = y*y (samozřejmě s ohledem na negativní čísla).
-  /// 
+  ///
   /// \image html images/texture_combination.svg "Vizualizace kombinace textury sinusových pruhů a sněhového poprašku." width=600
   /// <br>
   /// <br>
@@ -111,8 +113,8 @@ void phong_FS(OutFragment&outFragment,InFragment const&inFragment,Uniforms const
   /// Tvorba textury je znázorněna na následujícím obrázku:
   ///
   /// \image html images/stripes_texture.svg "Vizualizace tvorby sinusové textury" width=600
-  /// 
-  /// 
+  ///
+  ///
   /// Spekulární barvu materiálu nastavte na čistou bílou.
   /// Barvu světla nastavte na bílou.
   /// Nepoužívejte ambientní světlo.<br>
