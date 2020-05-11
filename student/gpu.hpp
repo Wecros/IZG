@@ -75,6 +75,17 @@ class GPU{
     /// \todo zde si můžete vytvořit proměnné grafické karty (buffery, programy, ...)
     /// @}
 
+    void vertexPuller();
+    void vertexProcessor();
+    void primitiveAssembly();
+    void clipping();
+    void perspectiveDivision();
+    void viewportTransformation();
+    void rasterization();
+    void fragmentProcessor();
+    void perFragmentOperation();
+
+  private:
     struct Indexing {
       BufferID  bufferID;
       IndexType indexType;
@@ -90,15 +101,35 @@ class GPU{
     };
 
     struct VPTable {
-      struct Indexing indexing;
-      std::array<struct Head, maxAttributes> heads = {};
+      Indexing indexing;
+      std::array<Head, maxAttributes> heads;
     };
-  private:
+
+    struct ProgramSettings {
+      VertexShader    vs;
+      FragmentShader  fs;
+      Uniforms        uniforms;
+      std::array<AttributeType, maxAttributes> vs2fs;
+    };
+
+    struct FrameBuffer {
+      uint32_t width;
+      uint32_t height;
+      uint8_t *colorBuffer;
+      float   *depthBuffer;
+    };
+
     typedef std::unordered_map<BufferID, void*> BufferMap;
     typedef std::unordered_map<VertexPullerID, std::unique_ptr<VPTable>> VPMap;
-    // typedef std::unordered_map<VertexPullerID, VPTable*> VPMap;
+    typedef std::unordered_map<VertexPullerID, std::unique_ptr<ProgramSettings>> ProgramMap;
 
     BufferMap buffers;
+
     VPMap vertexPullers;
     VertexPullerID activeVP;
+
+    ProgramMap programs;
+    ProgramID activeShader;
+
+    FrameBuffer frameBuffer;
 };
