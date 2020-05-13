@@ -12,6 +12,7 @@
 - delete this
 - change date
 - gpu and rabbit
+- add valid source to code (stackOverflow or other)
 */
 
 
@@ -55,7 +56,6 @@ BufferID GPU::createBuffer(uint64_t size) {
   /// Funkce by měla vrátit unikátní identifikátor identifikátor bufferu.<br>
   /// Na grafické kartě by mělo být možné alkovat libovolné množství bufferů o libovolné velikosti.<br>
   BufferID bufferID = buffers.size() + 1;
-  std::cerr << "Buffer ID:" << bufferID << std::endl;  // TODO: remove
   void *bufferData = malloc(size);
   buffers[bufferID] = bufferData;
 
@@ -143,19 +143,17 @@ bool GPU::isBuffer(BufferID buffer) {
  *
  * @return unique vertex puller identificator
  */
-ObjectID GPU::createVertexPuller     (){
+ObjectID GPU::createVertexPuller(){
   /// \todo Tato funkce vytvoří novou práznou tabulku s nastavením pro vertex puller.<br>
   /// Funkce by měla vrátit identifikátor nové tabulky.
   /// Prázdná tabulka s nastavením neobsahuje indexování a všechny čtecí hlavy jsou vypnuté.
   VertexPullerID vao = vertexPullers.size() + 1;
-  std::cerr << "Vertex Puller ID:" << vao << std::endl;  // TODO: remove
 
   // Initialize the table as empty
-  std::unique_ptr<VPTable> emptyTable = std::make_unique<VPTable>();
-  // VPTable *emptyTable = VPTable;
+  std::unique_ptr<VAO> emptyTable = std::make_unique<VAO>();
+  // VAO *emptyTable = VAO;
   emptyTable->indexing.bufferID = emptyID;
-  emptyTable->indexing.indexType = IndexType::UINT8;
-  emptyTable->indexing.enabled = false;
+  // emptyTable->indexing.indexType = IndexType::UINT8;
   for (auto head : emptyTable->heads) {
     head.bufferID = emptyID;
     head.offset = 0;
@@ -164,10 +162,8 @@ ObjectID GPU::createVertexPuller     (){
     head.enabled = false;
   }
 
-  std::cout << "ALLO";
   vertexPullers[vao] = std::move(emptyTable);  // FIXME: ignore error
   // vertexPullers.emplace(vao, std::move(emptyTable));
-  std::cout << "ALLO NOOOOOOOOOo";
 
   return vao;
 }
@@ -177,7 +173,7 @@ ObjectID GPU::createVertexPuller     (){
  *
  * @param vao vertex puller identificator
  */
-void     GPU::deleteVertexPuller     (VertexPullerID vao){
+void GPU::deleteVertexPuller(VertexPullerID vao){
   /// \todo Tato funkce by měla odstranit tabulku s nastavení pro vertex puller.<br>
   /// Parameter "vao" obsahuje identifikátor tabulky s nastavením.<br>
   /// Po uvolnění nastavení je identifiktátor volný a může být znovu použit.<br>
@@ -194,7 +190,7 @@ void     GPU::deleteVertexPuller     (VertexPullerID vao){
  * @param offset offset in bytes
  * @param buffer id of buffer
  */
-void     GPU::setVertexPullerHead    (VertexPullerID vao,uint32_t head,AttributeType type,uint64_t stride,uint64_t offset,BufferID buffer){
+void GPU::setVertexPullerHead(VertexPullerID vao,uint32_t head,AttributeType type,uint64_t stride,uint64_t offset,BufferID buffer){
   /// \todo Tato funkce nastaví jednu čtecí hlavu vertex pulleru.<br>
   /// Parametr "vao" vybírá tabulku s nastavením.<br>
   /// Parametr "head" vybírá čtecí hlavu vybraného vertex pulleru.<br>
@@ -216,7 +212,7 @@ void     GPU::setVertexPullerHead    (VertexPullerID vao,uint32_t head,Attribute
  * @param type type of index
  * @param buffer buffer with indices
  */
-void     GPU::setVertexPullerIndexing(VertexPullerID vao,IndexType type,BufferID buffer){
+void GPU::setVertexPullerIndexing(VertexPullerID vao,IndexType type,BufferID buffer){
   /// \todo Tato funkce nastaví indexování vertex pulleru.
   /// Parametr "vao" vybírá tabulku s nastavením.<br>
   /// Parametr "type" volí typ indexu, který je uložený v bufferu.<br>
@@ -233,7 +229,7 @@ void     GPU::setVertexPullerIndexing(VertexPullerID vao,IndexType type,BufferID
  * @param vao vertex puller
  * @param head head id
  */
-void     GPU::enableVertexPullerHead (VertexPullerID vao,uint32_t head){
+void GPU::enableVertexPullerHead(VertexPullerID vao,uint32_t head){
   /// \todo Tato funkce povolí čtecí hlavu daného vertex pulleru.<br>
   /// Pokud je čtecí hlava povolena, hodnoty z bufferu se budou kopírovat do atributu vrcholů vertex shaderu.<br>
   /// Parametr "vao" volí tabulku s nastavením vertex pulleru (vybírá vertex puller).<br>
@@ -250,7 +246,7 @@ void     GPU::enableVertexPullerHead (VertexPullerID vao,uint32_t head){
  * @param vao vertex puller id
  * @param head head id
  */
-void     GPU::disableVertexPullerHead(VertexPullerID vao,uint32_t head){
+void GPU::disableVertexPullerHead(VertexPullerID vao,uint32_t head){
   /// \todo Tato funkce zakáže čtecí hlavu daného vertex pulleru.<br>
   /// Pokud je čtecí hlava zakázána, hodnoty z bufferu se nebudou kopírovat do atributu vrcholu.<br>
   /// Parametry "vao" a "head" vybírají vertex puller a čtecí hlavu.<br>
@@ -265,7 +261,7 @@ void     GPU::disableVertexPullerHead(VertexPullerID vao,uint32_t head){
  *
  * @param vao id of vertex puller
  */
-void     GPU::bindVertexPuller       (VertexPullerID vao){
+void GPU::bindVertexPuller(VertexPullerID vao){
   /// \todo Tato funkce aktivuje nastavení vertex pulleru.<br>
   /// Pokud je daný vertex puller aktivován, atributy z bufferů jsou vybírány na základě jeho nastavení.<br>
   activeVP = vao;
@@ -274,7 +270,7 @@ void     GPU::bindVertexPuller       (VertexPullerID vao){
 /**
  * @brief This function deactivates vertex puller.
  */
-void     GPU::unbindVertexPuller     (){
+void GPU::unbindVertexPuller(){
   /// \todo Tato funkce deaktivuje vertex puller.
   /// To většinou znamená, že se vybere neexistující "emptyID" vertex puller.
   activeVP = emptyID;
@@ -287,7 +283,7 @@ void     GPU::unbindVertexPuller     (){
  *
  * @return true, if vertex puller "vao" exists
  */
-bool     GPU::isVertexPuller         (VertexPullerID vao){
+bool GPU::isVertexPuller(VertexPullerID vao){
   /// \todo Tato funkce otestuje, zda daný vertex puller existuje.
   /// Pokud ano, funkce vrací true.
   if (vertexPullers.find(vao) != vertexPullers.end()) {
@@ -308,7 +304,7 @@ bool     GPU::isVertexPuller         (VertexPullerID vao){
  *
  * @return shader program id
  */
-ProgramID        GPU::createProgram         (){
+ProgramID GPU::createProgram(){
   /// \todo Tato funkce by měla vytvořit nový shader program.<br>
   /// Funkce vrací unikátní identifikátor nového proramu.<br>
   /// Program je seznam nastavení, které obsahuje: ukazatel na vertex a fragment shader.<br>
@@ -325,7 +321,7 @@ ProgramID        GPU::createProgram         (){
  *
  * @param prg shader program id
  */
-void             GPU::deleteProgram         (ProgramID prg){
+void GPU::deleteProgram(ProgramID prg){
   /// \todo Tato funkce by měla smazat vybraný shader program.<br>
   /// Funkce smaže nastavení shader programu.<br>
   /// Identifikátor programu se stane volným a může být znovu využit.<br>
@@ -339,7 +335,7 @@ void             GPU::deleteProgram         (ProgramID prg){
  * @param vs vertex shader
  * @param fs fragment shader
  */
-void             GPU::attachShaders         (ProgramID prg,VertexShader vs,FragmentShader fs){
+void GPU::attachShaders(ProgramID prg,VertexShader vs,FragmentShader fs){
   /// \todo Tato funkce by měla připojít k vybranému shader programu vertex a fragment shader.
   programs[prg]->vs = vs;
   programs[prg]->fs = fs;
@@ -352,7 +348,7 @@ void             GPU::attachShaders         (ProgramID prg,VertexShader vs,Fragm
  * @param attrib id of attribute
  * @param type type of attribute
  */
-void             GPU::setVS2FSType          (ProgramID prg,uint32_t attrib,AttributeType type){
+void GPU::setVS2FSType(ProgramID prg,uint32_t attrib,AttributeType type){
   /// \todo tato funkce by měla zvolit typ vertex atributu, který je posílán z vertex shaderu do fragment shaderu.<br>
   /// V průběhu rasterizace vznikají fragment.<br>
   /// Fragment obsahují fragment atributy.<br>
@@ -370,7 +366,7 @@ void             GPU::setVS2FSType          (ProgramID prg,uint32_t attrib,Attri
  *
  * @param prg shader program id
  */
-void             GPU::useProgram            (ProgramID prg){
+void GPU::useProgram(ProgramID prg){
   /// \todo tato funkce by měla vybrat aktivní shader program.
   activeShader = prg;
 }
@@ -382,7 +378,7 @@ void             GPU::useProgram            (ProgramID prg){
  *
  * @return true, if shader program "prg" exists.
  */
-bool             GPU::isProgram             (ProgramID prg){
+bool GPU::isProgram(ProgramID prg){
   /// \todo tato funkce by měla zjistit, zda daný program existuje.<br>
   /// Funkce vráti true, pokud program existuje.<br>
   if (programs.find(prg) != programs.end()) {
@@ -399,7 +395,7 @@ bool             GPU::isProgram             (ProgramID prg){
  * @param uniformId id of uniform value (number of uniform values is stored in maxUniforms variable)
  * @param d value of uniform variable
  */
-void             GPU::programUniform1f      (ProgramID prg,uint32_t uniformId,float     const&d){
+void GPU::programUniform1f(ProgramID prg,uint32_t uniformId,float     const&d){
   /// \todo tato funkce by měla nastavit uniformní proměnnou shader programu.<br>
   /// Parametr "prg" vybírá shader program.<br>
   /// Parametr "uniformId" vybírá uniformní promzěnnou. Maximální počet uniformních proměnných je uložen v programné \link maxUniforms \endlink.<br>
@@ -417,7 +413,7 @@ void             GPU::programUniform1f      (ProgramID prg,uint32_t uniformId,fl
  * @param uniformId id of uniform value (number of uniform values is stored in maxUniforms variable)
  * @param d value of uniform variable
  */
-void             GPU::programUniform2f      (ProgramID prg,uint32_t uniformId,glm::vec2 const&d){
+void GPU::programUniform2f(ProgramID prg,uint32_t uniformId,glm::vec2 const&d){
   /// \todo tato funkce dělá obdobnou věc jako funkce programUniform1f.<br>
   /// Místo 1 floatu nahrává 2 floaty.
   auto programIt = programs.find(prg);
@@ -433,7 +429,7 @@ void             GPU::programUniform2f      (ProgramID prg,uint32_t uniformId,gl
  * @param uniformId id of uniform value (number of uniform values is stored in maxUniforms variable)
  * @param d value of uniform variable
  */
-void             GPU::programUniform3f      (ProgramID prg,uint32_t uniformId,glm::vec3 const&d){
+void GPU::programUniform3f(ProgramID prg,uint32_t uniformId,glm::vec3 const&d){
   /// \todo tato funkce dělá obdobnou věc jako funkce programUniform1f.<br>
   /// Místo 1 floatu nahrává 3 floaty.
   auto programIt = programs.find(prg);
@@ -449,7 +445,7 @@ void             GPU::programUniform3f      (ProgramID prg,uint32_t uniformId,gl
  * @param uniformId id of uniform value (number of uniform values is stored in maxUniforms variable)
  * @param d value of uniform variable
  */
-void             GPU::programUniform4f      (ProgramID prg,uint32_t uniformId,glm::vec4 const&d){
+void GPU::programUniform4f(ProgramID prg,uint32_t uniformId,glm::vec4 const&d){
   /// \todo tato funkce dělá obdobnou věc jako funkce programUniform1f.<br>
   /// Místo 1 floatu nahrává 4 floaty.
   auto programIt = programs.find(prg);
@@ -465,7 +461,7 @@ void             GPU::programUniform4f      (ProgramID prg,uint32_t uniformId,gl
  * @param uniformId id of uniform value (number of uniform values is stored in maxUniforms variable)
  * @param d value of uniform variable
  */
-void             GPU::programUniformMatrix4f(ProgramID prg,uint32_t uniformId,glm::mat4 const&d){
+void GPU::programUniformMatrix4f(ProgramID prg,uint32_t uniformId,glm::mat4 const&d){
   /// \todo tato funkce dělá obdobnou věc jako funkce programUniform1f.<br>
   /// Místo 1 floatu nahrává matici 4x4 (16 floatů).
   auto programIt = programs.find(prg);
@@ -490,7 +486,7 @@ void             GPU::programUniformMatrix4f(ProgramID prg,uint32_t uniformId,gl
  * @param width width of framebuffer
  * @param height height of framebuffer
  */
-void GPU::createFramebuffer      (uint32_t width,uint32_t height){
+void GPU::createFramebuffer(uint32_t width,uint32_t height){
   /// \todo Tato funkce by měla alokovat framebuffer od daném rozlišení.<br>
   /// Framebuffer se skládá z barevného a hloukového bufferu.<br>
   /// Buffery obsahují width x height pixelů.<br>
@@ -507,7 +503,7 @@ void GPU::createFramebuffer      (uint32_t width,uint32_t height){
 /**
  * @brief This function deletes framebuffer.
  */
-void GPU::deleteFramebuffer      (){
+void GPU::deleteFramebuffer(){
   /// \todo tato funkce by měla dealokovat framebuffer.
   delete[] frameBuffer.colorBuffer;
   delete[] frameBuffer.depthBuffer;
@@ -519,10 +515,17 @@ void GPU::deleteFramebuffer      (){
  * @param width new width of framebuffer
  * @param height new heght of framebuffer
  */
-void     GPU::resizeFramebuffer(uint32_t width,uint32_t height){
+void GPU::resizeFramebuffer(uint32_t width,uint32_t height){
   /// \todo Tato funkce by měla změnit velikost framebuffer.
+  // set the new width and height
+  const auto size = width * height;
   frameBuffer.width = width;
   frameBuffer.height = height;
+  // reallocated space for color and depth buffers
+  delete[] frameBuffer.colorBuffer;
+  delete[] frameBuffer.depthBuffer;
+  frameBuffer.colorBuffer = new uint8_t[size*4];
+  frameBuffer.depthBuffer = new float[size];
 }
 
 /**
@@ -580,34 +583,323 @@ uint32_t GPU::getFramebufferHeight(){
  * @param b blue channel
  * @param a alpha channel
  */
-void            GPU::clear                 (float r,float g,float b,float a){
+void GPU::clear(float r,float g,float b,float a){
   /// \todo Tato funkce by měla vyčistit framebuffer.<br>
   /// Barevný buffer vyčistí na barvu podle parametrů r g b a (0 - nulová intenzita, 1 a větší - maximální intenzita).<br>
   /// (0,0,0) - černá barva, (1,1,1) - bílá barva.<br>
   /// Hloubkový buffer nastaví na takovou hodnotu, která umožní rasterizaci trojúhelníka, který leží v rámci pohledového tělesa.<br>
   /// Hloubka by měla být tedy větší než maximální hloubka v NDC (normalized device coordinates).<br>
-
+  const auto size = frameBuffer.width * frameBuffer.height;
   // clear the color buffer
-  for (size_t i = 0; i < frameBuffer.width * frameBuffer.height * 4; i+=4) {
-    frameBuffer.colorBuffer[i] = r;
-    frameBuffer.colorBuffer[i+1] = g;
-    frameBuffer.colorBuffer[i+2] = b;
-    frameBuffer.colorBuffer[i+3] = a; // FIXME: does this work?
+  for (size_t y = 0; y < frameBuffer.height; y++) {
+    for (size_t x = 0; x < frameBuffer.width; x++) {
+      putPixel({(uint8_t) (r * 255),
+                (uint8_t) (g * 255),
+                (uint8_t) (b * 255),
+                (uint8_t) (a * 255)}, x, y);
+    }
   }
+  // for (size_t i = 0; i < size * 4; i+=4) {
+  //   frameBuffer.colorBuffer[i]   = (uint8_t) (1 * 255);
+  //   frameBuffer.colorBuffer[i+1] = (uint8_t) (g * 255);
+  //   frameBuffer.colorBuffer[i+2] = (uint8_t) (b * 255);
+  //   frameBuffer.colorBuffer[i+3] = (uint8_t) (a * 255); // FIXME: does this work?
+  // }
   // clear the depth buffer
-  for (size_t i = 0; i < frameBuffer.width * frameBuffer.height; i++) {
-    frameBuffer.depthBuffer[i] = 1.5;
+  for (size_t i = 0; i < size; i++) {
+    frameBuffer.depthBuffer[i] = 5.0f;
   }
 }
 
-
-
-void            GPU::drawTriangles         (uint32_t  nofVertices){
+void GPU::drawTriangles(uint32_t  nofVertices){
   /// \todo Tato funkce vykreslí trojúhelníky podle daného nastavení.<br>
   /// Vrcholy se budou vybírat podle nastavení z aktivního vertex pulleru (pomocí bindVertexPuller).<br>
   /// Vertex shader a fragment shader se zvolí podle aktivního shader programu (pomocí useProgram).<br>
   /// Parametr "nofVertices" obsahuje počet vrcholů, který by se měl vykreslit (3 pro jeden trojúhelník).<br>
+  auto outVertices = vertexPuller(nofVertices);
+  primitiveAssembly(outVertices);
+  clipping();
+  perspectiveDivision();
+  viewportTransformation();
+  rasterization();
+  fragmentProcessor();
+  perFragmentOperation();
+}
+
+// Load the vertices data into in vertices that are transformed into out vertices.
+// Returns a vector of out vertices.
+std::vector<OutVertex> GPU::vertexPuller(uint32_t nofVertices) {
+  auto vao = vertexPullers.at(activeVP).get();
+  bool vaoIndexing = isBuffer(vao->indexing.bufferID);
+
+  std::vector<OutVertex> outVertices;
+  InVertex inVertex;
+  inVertex.gl_VertexID = 0;   // current inVertex ID
+
+  // inVertexID = counter for vertexPuller invocation count
+  for (uint32_t inVertexID = 0; inVertexID < nofVertices; inVertexID++) {
+    if (vaoIndexing) {
+        getBufferData(vao->indexing.bufferID, inVertexID * (uint32_t) vao->indexing.indexType,
+          (uint64_t) vao->indexing.indexType, &inVertex.gl_VertexID);
+    } else {
+      inVertex.gl_VertexID = inVertexID;
+    }
+
+    for (size_t j = 0; j < maxAttributes; j++) {
+      auto head = vao->heads[j];
+      if (head.enabled) {  // if head is enabled
+        switch (head.type)
+        {
+        case AttributeType::FLOAT:
+          getBufferData(head.bufferID, head.offset + head.stride * inVertex.gl_VertexID,
+            (uint64_t) head.type * 4, &inVertex.attributes[j].v1);
+          break;
+        case AttributeType::VEC2:
+          getBufferData(head.bufferID, head.offset + head.stride * inVertex.gl_VertexID,
+            (uint64_t) head.type * 4, &inVertex.attributes[j].v2);
+          break;
+        case AttributeType::VEC3:
+          getBufferData(head.bufferID, head.offset + head.stride * inVertex.gl_VertexID,
+            (uint64_t) head.type * 4, &inVertex.attributes[j].v3);
+          break;
+        case AttributeType::VEC4:
+          getBufferData(head.bufferID, head.offset + head.stride * inVertex.gl_VertexID,
+            (uint64_t) head.type * 4, &inVertex.attributes[j].v4);
+          break;
+        default: break;
+        }
+      }
+    }
+    outVertices.emplace_back();
+    vertexProcessor(outVertices.back(), inVertex);
+  }
+  return outVertices;
+}
+
+// Load the in vertex into vertex shader which transforms it into out vertex.
+void GPU::vertexProcessor(OutVertex &outVertex, InVertex &inVertex) {
+  auto program = programs.at(activeShader).get();
+  program->vs(outVertex, inVertex, program->uniforms);
+  std::cerr << "vectorex: " << outVertex.gl_Position.x << ","
+            << outVertex.gl_Position.y << ","
+            << outVertex.gl_Position.z << ","
+            << outVertex.gl_Position.w << "," << std::endl;
+}
+
+// Take 3 consecutive out vertices and build them into a triangle.
+void GPU::primitiveAssembly(std::vector<OutVertex> outVertices) {
+  for (size_t i = 0; i < outVertices.size(); i+=3) {
+    Triangle triangle;
+    for (size_t j = 0; j < triangle.size(); j++) {
+      triangle.at(j) = outVertices.at(i+j);
+    }
+    triangles.push_back(triangle);
+  }
+}
+
+// Removes triangles not in view.
+void GPU::clipping() {
 
 }
+
+// Transform homogenous coordinates to Cartesian coordinates
+void GPU::perspectiveDivision() {
+  for (auto &triangle : triangles) {
+    for (auto &vertex : triangle) {
+      auto &vector = vertex.gl_Position;
+      if (vector.w == 0) {
+        continue;
+      }
+      vector.x /= vector.w;
+      vector.y /= vector.w;
+      vector.z /= vector.w;
+      vector = vector / vector.w;
+      std::cerr << "divisionorex: " << vector.x << ","
+            << vector.y << ","
+            << vector.z << ","
+            << vector.w << std::endl;
+    }
+  }
+}
+
+// Transform NDC values to screen space
+void GPU::viewportTransformation() {
+  for (auto &triangle : triangles) {
+    for (auto &vertex : triangle) {
+      auto &vector = vertex.gl_Position;
+      vector.x = ((vector.x + 1.0) / 2.0) * frameBuffer.width;
+      vector.y = ((vector.y + 1.0) / 2.0) * frameBuffer.height;
+    }
+  }
+}
+
+// Rasterize triangle in screen space
+void GPU::rasterization() {
+  for (auto triangle : triangles) {
+    int width = frameBuffer.width;
+    int height = frameBuffer.height;
+    float xmin = width;
+    float xmax = 0;
+    float ymin = height;
+    float ymax = 0;
+    for (auto vertex : triangle) {
+      auto vector = vertex.gl_Position;
+      std::cout << "x: " << vector.x << ", y: " << vector.y << std::endl;
+      if (vector.x < xmin) {
+        xmin = GPU::clamp(vector.x, 0, width);
+      }
+      if (vector.x > xmax) {
+        xmax = GPU::clamp(vector.x, 0, width);
+      }
+      if (vector.y < ymin) {
+        ymin = GPU::clamp(vector.y, 0, height);
+      }
+      if (vector.y > ymax) {
+        ymax = GPU::clamp(vector.y, 0, height);
+      }
+    }
+    if (xmin == xmax) {
+      std::cout << "x same" << std::endl;
+      xmin--;
+    }
+    if (ymin == ymax) {
+      std::cout << "y same" << std::endl;
+      ymin--;
+    }
+    std::cout << "xmin: " << xmin << ", ymin: " << ymin << std::endl;
+    std::cout << "xmax: " << xmax << ", ymax: " << ymax << std::endl;
+
+    for (float y = ymin; y < ymax; y++) {
+      for (float x = xmin; x < xmax; x++) {
+        glm::vec2 pixel;
+        pixel.x = x + 0.5f;
+        pixel.y = y + 0.5f;
+        pinedaTriangle(triangle, pixel);
+      }
+    }
+  }
+}
+
+void GPU::fragmentProcessor() {
+
+}
+
+void GPU::perFragmentOperation() {
+
+}
+
+
+/* Helper functions for DrawTriangles functions */
+
+void GPU::pinedaTriangle(Triangle triangle, glm::vec2 p) {
+  auto vertex0 = triangle.at(0);
+  auto vertex1 = triangle.at(1);
+  auto vertex2 = triangle.at(2);
+  auto v0 = vertex0.gl_Position;
+  auto v1 = vertex1.gl_Position;
+  auto v2 = vertex2.gl_Position;
+
+  float area = edgeFunction(v0, v1, v2); // area of the triangle multiplied by 2
+  float w0 = edgeFunction(v1, v2, p); // signed area of the triangle v1v2p multiplied by 2
+  float w1 = edgeFunction(v2, v0, p); // signed area of the triangle v2v0p multiplied by 2
+  float w2 = edgeFunction(v0, v1, p); // signed area of the triangle v0v1p multiplied by 2
+  bool inside = (w0 >= 0 && w1 >= 0 && w2 >= 0);
+
+  // if point p is inside triangles defined by vertices v0, v1, v2
+  if (inside) {
+      // barycentric coordinates are the areas of the sub-triangles divided by the area of the main triangle
+      w0 /= area;
+      w1 /= area;
+      w2 /= area;
+
+      InFragment inFragment;
+      inFragment.gl_FragCoord.x = p.x;
+      inFragment.gl_FragCoord.y = p.y;
+      auto program = programs.at(activeShader).get();
+
+      float h0 = v0.w;
+      float h1 = v1.w;
+      float h2 = v2.w;
+      for (size_t i = 0; i < maxAttributes; i++) {
+        auto attributeType = program->vs2fs[i];
+        switch (attributeType)
+        {
+        case AttributeType::FLOAT:
+          inFragment.attributes[i].v1 =
+            (((vertex0.attributes[i].v1 * w0) / h0) +
+             ((vertex1.attributes[i].v1 * w1) / h1) +
+             ((vertex2.attributes[i].v1 * w2) / h2)) /
+            ((w0 / h0) + (w1 / h1) + (w2 / h2));
+          break;
+        case AttributeType::VEC2:
+          inFragment.attributes[i].v2 =
+            (((vertex0.attributes[i].v2 * w0) / h0) +
+             ((vertex1.attributes[i].v2 * w1) / h1) +
+             ((vertex2.attributes[i].v2 * w2) / h2)) /
+            ((w0 / h0) + (w1 / h1) + (w2 / h2));
+          break;
+        case AttributeType::VEC3:
+          inFragment.attributes[i].v3 =
+            (((vertex0.attributes[i].v3 * w0) / h0) +
+             ((vertex1.attributes[i].v3 * w1) / h1) +
+             ((vertex2.attributes[i].v3 * w2) / h2)) /
+            ((w0 / h0) + (w1 / h1) + (w2 / h2));
+          break;
+        case AttributeType::VEC4:
+          inFragment.attributes[i].v4 =
+            (((vertex0.attributes[i].v4 * w0) / h0) +
+             ((vertex1.attributes[i].v4 * w1) / h1) +
+             ((vertex2.attributes[i].v4 * w2) / h2)) /
+            ((w0 / h0) + (w1 / h1) + (w2 / h2));
+          break;
+        default:
+          break;
+        }
+      }
+
+      OutFragment outFragment;
+      program->fs(outFragment, inFragment, program->uniforms);
+      // get color
+      uint8_t r = (uint8_t) (outFragment.gl_FragColor.r * 255);
+      uint8_t g = (uint8_t) (outFragment.gl_FragColor.g * 255);
+      uint8_t b = (uint8_t) (outFragment.gl_FragColor.b * 255);
+      uint8_t a = (uint8_t) (outFragment.gl_FragColor.a * 255);
+      // std::cout << "r: " << outFragment.gl_FragColor.r << ", g: "
+      //           << outFragment.gl_FragColor.g << ", b: "
+      //           << outFragment.gl_FragColor.b << ", a: "
+      //           << outFragment.gl_FragColor.a << std::endl;
+      putPixel({r, g, b, a}, (int) p.x, (int) p.y);
+  }
+}
+
+// Source: https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/rasterization-stage
+inline bool GPU::edgeFunction(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c)
+{
+    return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
+    // return (a.x - b.x) * (c.y - a.y) - (a.y - b.y) * (c.x - a.x);
+}
+
+void GPU::putPixel(RGBA rgba, int x, int y) {
+	if (x >= 0 && y >= 0 && x < frameBuffer.width && y < frameBuffer.height) {
+		frameBuffer.colorBuffer[(y * frameBuffer.width + x) * 4 + 0] = rgba.at(0);
+		frameBuffer.colorBuffer[(y * frameBuffer.width + x) * 4 + 1] = rgba.at(1);
+		frameBuffer.colorBuffer[(y * frameBuffer.width + x) * 4 + 2] = rgba.at(2);
+		frameBuffer.colorBuffer[(y * frameBuffer.width + x) * 4 + 3] = rgba.at(3);
+  }
+}
+
+GPU::RGBA GPU::getPixel(int x, int y) {
+  if (x >= 0 && y >- 0 && x < frameBuffer.width && y < frameBuffer.height) {
+    auto r = frameBuffer.colorBuffer[(y * frameBuffer.width + x) * 4 + 0];
+    auto g = frameBuffer.colorBuffer[(y * frameBuffer.width + x) * 4 + 1];
+    auto b = frameBuffer.colorBuffer[(y * frameBuffer.width + x) * 4 + 2];
+    auto a = frameBuffer.colorBuffer[(y * frameBuffer.width + x) * 4 + 3];
+    return {r, g, b, a};
+  }
+	else {
+		return {0, 0, 0, 255};
+  }
+}
+
 
 /// @}

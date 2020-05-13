@@ -75,9 +75,9 @@ class GPU{
     /// \todo zde si můžete vytvořit proměnné grafické karty (buffery, programy, ...)
     /// @}
 
-    void vertexPuller();
-    void vertexProcessor();
-    void primitiveAssembly();
+    std::vector<OutVertex> vertexPuller(uint32_t nofVertices);
+    void vertexProcessor(OutVertex &outVertex, InVertex &inVertex);
+    void primitiveAssembly(std::vector<OutVertex> outVertices);
     void clipping();
     void perspectiveDivision();
     void viewportTransformation();
@@ -85,11 +85,20 @@ class GPU{
     void fragmentProcessor();
     void perFragmentOperation();
 
+    typedef std::array<OutVertex, 3> Triangle;
+    typedef std::array<uint8_t, 4> RGBA;
+
+    void pinedaTriangle(Triangle triangle, glm::vec2 p);
+    inline bool edgeFunction(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c);
+
+
+    void putPixel(RGBA rgba, int x, int y);
+    RGBA getPixel(int x, int y);
+
   private:
     struct Indexing {
       BufferID  bufferID;
       IndexType indexType;
-      bool      enabled;    // FIXME: remove
     };
 
     struct Head {
@@ -100,7 +109,7 @@ class GPU{
       bool          enabled;
     };
 
-    struct VPTable {
+    struct VAO {
       Indexing indexing;
       std::array<Head, maxAttributes> heads;
     };
@@ -119,8 +128,9 @@ class GPU{
       float   *depthBuffer;
     };
 
+
     typedef std::unordered_map<BufferID, void*> BufferMap;
-    typedef std::unordered_map<VertexPullerID, std::unique_ptr<VPTable>> VPMap;
+    typedef std::unordered_map<VertexPullerID, std::unique_ptr<VAO>> VPMap;
     typedef std::unordered_map<VertexPullerID, std::unique_ptr<ProgramSettings>> ProgramMap;
 
     BufferMap buffers;
@@ -132,4 +142,12 @@ class GPU{
     ProgramID activeShader;
 
     FrameBuffer frameBuffer;
+
+    // #define triangleVertices 3
+    std::vector<Triangle> triangles;
+
+
+    inline float clamp(float x, float min, float max) {
+      return std::min(std::max(x, min), max);
+    }
 };
