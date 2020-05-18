@@ -88,8 +88,6 @@ class GPU{
     void perFragmentOperation();
 
     OutVertex findClippedVertex(OutVertex A, OutVertex B);
-    bool are2VerticesSame(OutVertex A, OutVertex B);
-    bool are4VerticesSame(OutVertex Ax, OutVertex Bx, OutVertex A, OutVertex B);
 
     typedef std::array<uint8_t, 4> RGBA;
 

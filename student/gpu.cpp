@@ -797,54 +797,6 @@ OutVertex GPU::findClippedVertex(OutVertex A, OutVertex B) {
   return Ax;
 }
 
-bool GPU::are2VerticesSame(OutVertex A, OutVertex B) {
-  bool positionEqual = A.gl_Position == B.gl_Position;
-  bool attributeEqual = true;
-  for (size_t i = 0; i < maxAttributes; i++) {
-    attributeEqual &= A.attributes[i].v1 == B.attributes[i].v1;
-    attributeEqual &= A.attributes[i].v2 == B.attributes[i].v2;
-    attributeEqual &= A.attributes[i].v3 == B.attributes[i].v3;
-    attributeEqual &= A.attributes[i].v4 == B.attributes[i].v4;
-  }
-
-  return positionEqual && attributeEqual;
-}
-
-bool GPU::are4VerticesSame(OutVertex Ax, OutVertex Bx, OutVertex A, OutVertex B) {
-  bool positionEqual = ((Ax.gl_Position == A.gl_Position) || (Ax.gl_Position == B.gl_Position)) &&
-                       ((Bx.gl_Position == A.gl_Position) || (Bx.gl_Position == B.gl_Position));
-  bool attributeEqual = false;
-  if (positionEqual) {
-    attributeEqual = true;
-    OutVertex A1, A2;
-    if (Ax.gl_Position == A.gl_Position && Bx.gl_Position == A.gl_Position) {
-      A1 = A;
-      A2 = A;
-    } else if (Ax.gl_Position == A.gl_Position && Bx.gl_Position == B.gl_Position) {
-      A1 = A;
-      A2 = B;
-    } else if (Ax.gl_Position == B.gl_Position && Bx.gl_Position == A.gl_Position) {
-      A1 = B;
-      A2 = A;
-    } else if (Ax.gl_Position == B.gl_Position && Bx.gl_Position == B.gl_Position) {
-      A1 = B;
-      A2 = B;
-    }
-    for (size_t i = 0; i < maxAttributes; i++) {
-      attributeEqual &= Ax.attributes[i].v1 == A1.attributes[i].v1;
-      attributeEqual &= Ax.attributes[i].v2 == A1.attributes[i].v2;
-      attributeEqual &= Ax.attributes[i].v3 == A1.attributes[i].v3;
-      attributeEqual &= Ax.attributes[i].v4 == A1.attributes[i].v4;
-      attributeEqual &= Bx.attributes[i].v1 == A2.attributes[i].v1;
-      attributeEqual &= Bx.attributes[i].v2 == A2.attributes[i].v2;
-      attributeEqual &= Bx.attributes[i].v3 == A2.attributes[i].v3;
-      attributeEqual &= Bx.attributes[i].v4 == A2.attributes[i].v4;
-    }
-  }
-
-  return positionEqual && attributeEqual;
-}
-
 // Transform homogenous coordinates to Cartesian coordinates
 void GPU::perspectiveDivision() {
   for (auto &triangle : triangles) {
