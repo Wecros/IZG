@@ -617,13 +617,6 @@ void GPU::drawTriangles(uint32_t  nofVertices){
   /// Vertex shader a fragment shader se zvolí podle aktivního shader programu (pomocí useProgram).<br>
   /// Parametr "nofVertices" obsahuje počet vrcholů, který by se měl vykreslit (3 pro jeden trojúhelník).<br>
   auto outVertices = vertexPuller(nofVertices);
-  primitiveAssembly(outVertices);
-  clipping();
-  perspectiveDivision();
-  viewportTransformation();
-  rasterization();
-  fragmentProcessor();
-  perFragmentOperation();
 }
 
 // Load the vertices data into in vertices that are transformed into out vertices.
@@ -672,6 +665,10 @@ std::vector<OutVertex> GPU::vertexPuller(uint32_t nofVertices) {
     }
     outVertices.emplace_back();
     vertexProcessor(outVertices.back(), inVertex);
+    if (outVertices.size() == 3) {
+      primitiveAssembly(outVertices);
+      outVertices.clear();
+    }
   }
   return outVertices;
 }
@@ -680,10 +677,10 @@ std::vector<OutVertex> GPU::vertexPuller(uint32_t nofVertices) {
 void GPU::vertexProcessor(OutVertex &outVertex, InVertex &inVertex) {
   auto program = programs.at(activeShader).get();
   program->vs(outVertex, inVertex, program->uniforms);
-  std::cerr << "vectorex: " << outVertex.gl_Position.x << ","
-            << outVertex.gl_Position.y << ","
-            << outVertex.gl_Position.z << ","
-            << outVertex.gl_Position.w << "," << std::endl;
+  // std::cerr << "vectorex: " << outVertex.gl_Position.x << ","
+  //           << outVertex.gl_Position.y << ","
+  //           << outVertex.gl_Position.z << ","
+  //           << outVertex.gl_Position.w << "," << std::endl;
 }
 
 // Take 3 consecutive out vertices and build them into a triangle.
@@ -695,11 +692,157 @@ void GPU::primitiveAssembly(std::vector<OutVertex> outVertices) {
     }
     triangles.push_back(triangle);
   }
+  clipping(triangles.at(0));
+  perspectiveDivision();
+  viewportTransformation();
+  rasterization();
+  fragmentProcessor();
+  perFragmentOperation();
+  triangles.clear();
 }
 
-// Removes triangles not in view.
-void GPU::clipping() {
+// Removes triangle not in view.
+void GPU::clipping(Triangle triangle) {
+  auto A = triangle.at(0);
+  auto B = triangle.at(1);
+  auto C = triangle.at(2);
 
+  int ineqCount = 0;
+  std::vector<OutVertex> verticesToChange;
+  for (auto vertex : triangle) {
+    bool isInNearPlace = -vertex.gl_Position.w <= vertex.gl_Position.z;
+    if (!isInNearPlace) {
+      verticesToChange.push_back(vertex);
+      std::cout << verticesToChange.back().gl_Position.x << ", " << verticesToChange.back().gl_Position.y << ", " << verticesToChange.back().gl_Position.z << ", " << verticesToChange.back().gl_Position.w << std::endl;
+      ineqCount++;
+    }
+  }
+  bool isAInNearPlace = -A.gl_Position.w <= A.gl_Position.z;
+  bool isBInNearPlace = -B.gl_Position.w <= B.gl_Position.z;
+  bool isCInNearPlace = -C.gl_Position.w <= C.gl_Position.z;
+
+  std::cout << A.gl_Position.x << ", " << A.gl_Position.y << ", " << A.gl_Position.z << ", " << A.gl_Position.w << std::endl;
+  std::cout << B.gl_Position.x << ", " << B.gl_Position.y << ", " << B.gl_Position.z << ", " << B.gl_Position.w << std::endl;
+  std::cout << C.gl_Position.x << ", " << C.gl_Position.y << ", " << C.gl_Position.z << ", " << C.gl_Position.w << std::endl;
+  std::cout << "ineqcount: " << ineqCount << std::endl;
+
+  OutVertex Ax, Bx, Cx, Xt1, Xt2;
+  Triangle t1, t2, t;
+  if (ineqCount == 1) {
+    // one extra point is created, additional triangle needed
+    if (!isAInNearPlace) {
+      Xt1 = findClippedVertex(B, A);
+      Xt2 = findClippedVertex(C, A);
+      t1 = {B, Xt1, C};
+      t2 = {C, Xt1, Xt2};
+    } else if (!isBInNearPlace) {
+      Xt1 = findClippedVertex(A, B);
+      Xt2 = findClippedVertex(C, B);
+      t1 = {A, Xt1, C};
+      t2 = {C, Xt1, Xt2};
+    } else if (!isCInNearPlace) {
+      Xt1 = findClippedVertex(A, C);
+      Xt2 = findClippedVertex(B, C);
+      t1 = {A, Xt1, B};
+      t2 = {B, Xt1, Xt2};
+    }
+    triangles.clear();
+    triangles.push_back(t1);
+    triangles.push_back(t2);
+  } else if (ineqCount == 2) {
+    // two points are changed, it's still one triangle
+    if (!isAInNearPlace && !isBInNearPlace) {
+      Ax = findClippedVertex(C, A);
+      Bx = findClippedVertex(C, B);
+      t = {C, Ax, Bx};
+    } else if (!isBInNearPlace && !isCInNearPlace) {
+      Bx = findClippedVertex(A, B);
+      Cx = findClippedVertex(A, C);
+      t = {A, Bx, Cx};
+    } else if (!isAInNearPlace && !isCInNearPlace) {
+      Cx = findClippedVertex(B, C);
+      Ax = findClippedVertex(B, A);
+      t = {B, Cx, Ax};
+    }
+    triangles.clear();
+    triangles.push_back(t);
+  }
+}
+
+OutVertex GPU::findClippedVertex(OutVertex A, OutVertex B) {
+  OutVertex Ax;
+  float t = (-A.gl_Position.w - A.gl_Position.z) /
+            (B.gl_Position.w + B.gl_Position.z - A.gl_Position.z);
+  Ax.gl_Position = A.gl_Position + t * (B.gl_Position - A.gl_Position);
+  auto activePrg = programs.at(activeShader).get();
+  for (size_t i = 0; i < activePrg->vs2fs.size(); i++) {
+    switch (activePrg->vs2fs[i])
+    {
+    case AttributeType::FLOAT:
+      Ax.attributes[i].v1 = A.attributes[i].v1 + t * (B.attributes[i].v1 - A.attributes[i].v1);
+      break;
+    case AttributeType::VEC2:
+      Ax.attributes[i].v2 = A.attributes[i].v2 + t * (B.attributes[i].v2 - A.attributes[i].v2);
+      break;
+    case AttributeType::VEC3:
+      Ax.attributes[i].v3 = A.attributes[i].v3 + t * (B.attributes[i].v3 - A.attributes[i].v3);
+      break;
+    case AttributeType::VEC4:
+      Ax.attributes[i].v4 = A.attributes[i].v4 + t * (B.attributes[i].v4 - A.attributes[i].v4);
+      break;
+    default:
+      break;
+    }
+  }
+  return Ax;
+}
+
+bool GPU::are2VerticesSame(OutVertex A, OutVertex B) {
+  bool positionEqual = A.gl_Position == B.gl_Position;
+  bool attributeEqual = true;
+  for (size_t i = 0; i < maxAttributes; i++) {
+    attributeEqual &= A.attributes[i].v1 == B.attributes[i].v1;
+    attributeEqual &= A.attributes[i].v2 == B.attributes[i].v2;
+    attributeEqual &= A.attributes[i].v3 == B.attributes[i].v3;
+    attributeEqual &= A.attributes[i].v4 == B.attributes[i].v4;
+  }
+
+  return positionEqual && attributeEqual;
+}
+
+bool GPU::are4VerticesSame(OutVertex Ax, OutVertex Bx, OutVertex A, OutVertex B) {
+  bool positionEqual = ((Ax.gl_Position == A.gl_Position) || (Ax.gl_Position == B.gl_Position)) &&
+                       ((Bx.gl_Position == A.gl_Position) || (Bx.gl_Position == B.gl_Position));
+  bool attributeEqual = false;
+  if (positionEqual) {
+    attributeEqual = true;
+    OutVertex A1, A2;
+    if (Ax.gl_Position == A.gl_Position && Bx.gl_Position == A.gl_Position) {
+      A1 = A;
+      A2 = A;
+    } else if (Ax.gl_Position == A.gl_Position && Bx.gl_Position == B.gl_Position) {
+      A1 = A;
+      A2 = B;
+    } else if (Ax.gl_Position == B.gl_Position && Bx.gl_Position == A.gl_Position) {
+      A1 = B;
+      A2 = A;
+    } else if (Ax.gl_Position == B.gl_Position && Bx.gl_Position == B.gl_Position) {
+      A1 = B;
+      A2 = B;
+    }
+    for (size_t i = 0; i < maxAttributes; i++) {
+      attributeEqual &= Ax.attributes[i].v1 == A1.attributes[i].v1;
+      attributeEqual &= Ax.attributes[i].v2 == A1.attributes[i].v2;
+      attributeEqual &= Ax.attributes[i].v3 == A1.attributes[i].v3;
+      attributeEqual &= Ax.attributes[i].v4 == A1.attributes[i].v4;
+      attributeEqual &= Bx.attributes[i].v1 == A2.attributes[i].v1;
+      attributeEqual &= Bx.attributes[i].v2 == A2.attributes[i].v2;
+      attributeEqual &= Bx.attributes[i].v3 == A2.attributes[i].v3;
+      attributeEqual &= Bx.attributes[i].v4 == A2.attributes[i].v4;
+    }
+  }
+
+  return positionEqual && attributeEqual;
 }
 
 // Transform homogenous coordinates to Cartesian coordinates
@@ -713,11 +856,10 @@ void GPU::perspectiveDivision() {
       vector.x /= vector.w;
       vector.y /= vector.w;
       vector.z /= vector.w;
-      vector = vector / vector.w;
-      std::cerr << "divisionorex: " << vector.x << ","
-            << vector.y << ","
-            << vector.z << ","
-            << vector.w << std::endl;
+      // std::cerr << "divisionorex: " << vector.x << ","
+      // << vector.y << ","
+      // << vector.z << ","
+      // << vector.w << std::endl;
     }
   }
 }
@@ -727,8 +869,11 @@ void GPU::viewportTransformation() {
   for (auto &triangle : triangles) {
     for (auto &vertex : triangle) {
       auto &vector = vertex.gl_Position;
-      vector.x = ((vector.x + 1.0) / 2.0) * frameBuffer.width;
-      vector.y = ((vector.y + 1.0) / 2.0) * frameBuffer.height;
+      std::cerr << vector.x << ", " << vector.y << std::endl;
+      vector.x *= frameBuffer.width  / 2;
+      vector.y *= frameBuffer.height / 2;
+      vector.x += frameBuffer.width  / 2;
+      vector.y += frameBuffer.height / 2;
     }
   }
 }
@@ -746,26 +891,26 @@ void GPU::rasterization() {
       auto vector = vertex.gl_Position;
       std::cout << "x: " << vector.x << ", y: " << vector.y << std::endl;
       if (vector.x < xmin) {
-        xmin = GPU::clamp(vector.x, 0, width);
+        xmin = clamp(vector.x, 0, width);
       }
       if (vector.x > xmax) {
-        xmax = GPU::clamp(vector.x, 0, width);
+        xmax = clamp(vector.x, 0, width);
       }
       if (vector.y < ymin) {
-        ymin = GPU::clamp(vector.y, 0, height);
+        ymin = clamp(vector.y, 0, height);
       }
       if (vector.y > ymax) {
-        ymax = GPU::clamp(vector.y, 0, height);
+        ymax = clamp(vector.y, 0, height);
       }
     }
-    if (xmin == xmax) {
-      std::cout << "x same" << std::endl;
-      xmin--;
-    }
-    if (ymin == ymax) {
-      std::cout << "y same" << std::endl;
-      ymin--;
-    }
+    // if (xmin == xmax) {
+    //   std::cout << "x same" << std::endl;
+    //   xmin--;
+    // }
+    // if (ymin == ymax) {
+    //   std::cout << "y same" << std::endl;
+    //   ymin--;
+    // }
     std::cout << "xmin: " << xmin << ", ymin: " << ymin << std::endl;
     std::cout << "xmax: " << xmax << ", ymax: " << ymax << std::endl;
 
@@ -822,6 +967,7 @@ void GPU::pinedaTriangle(Triangle triangle, glm::vec2 p) {
       float h2 = v2.w;
       for (size_t i = 0; i < maxAttributes; i++) {
         auto attributeType = program->vs2fs[i];
+        // TODO: check for active head
         switch (attributeType)
         {
         case AttributeType::FLOAT:
@@ -860,10 +1006,10 @@ void GPU::pinedaTriangle(Triangle triangle, glm::vec2 p) {
       OutFragment outFragment;
       program->fs(outFragment, inFragment, program->uniforms);
       // get color
-      uint8_t r = (uint8_t) (outFragment.gl_FragColor.r * 255);
-      uint8_t g = (uint8_t) (outFragment.gl_FragColor.g * 255);
-      uint8_t b = (uint8_t) (outFragment.gl_FragColor.b * 255);
-      uint8_t a = (uint8_t) (outFragment.gl_FragColor.a * 255);
+      uint8_t r = (uint8_t) (clamp(outFragment.gl_FragColor.r, 0, 1) * 255);
+      uint8_t g = (uint8_t) (clamp(outFragment.gl_FragColor.g, 0, 1) * 255);
+      uint8_t b = (uint8_t) (clamp(outFragment.gl_FragColor.b, 0, 1) * 255);
+      uint8_t a = (uint8_t) (clamp(outFragment.gl_FragColor.a, 0, 1) * 255);
       // std::cout << "r: " << outFragment.gl_FragColor.r << ", g: "
       //           << outFragment.gl_FragColor.g << ", b: "
       //           << outFragment.gl_FragColor.b << ", a: "

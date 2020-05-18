@@ -75,17 +75,22 @@ class GPU{
     /// \todo zde si můžete vytvořit proměnné grafické karty (buffery, programy, ...)
     /// @}
 
+    typedef std::array<OutVertex, 3> Triangle;
+
     std::vector<OutVertex> vertexPuller(uint32_t nofVertices);
     void vertexProcessor(OutVertex &outVertex, InVertex &inVertex);
     void primitiveAssembly(std::vector<OutVertex> outVertices);
-    void clipping();
+    void clipping(Triangle triangle);
     void perspectiveDivision();
     void viewportTransformation();
     void rasterization();
     void fragmentProcessor();
     void perFragmentOperation();
 
-    typedef std::array<OutVertex, 3> Triangle;
+    OutVertex findClippedVertex(OutVertex A, OutVertex B);
+    bool are2VerticesSame(OutVertex A, OutVertex B);
+    bool are4VerticesSame(OutVertex Ax, OutVertex Bx, OutVertex A, OutVertex B);
+
     typedef std::array<uint8_t, 4> RGBA;
 
     void pinedaTriangle(Triangle triangle, glm::vec2 p);
