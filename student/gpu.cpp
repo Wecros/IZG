@@ -13,6 +13,7 @@
 - change date
 - gpu and rabbit
 - add valid source to code (stackOverflow or other)
+- replace .width with getWidth etc.
 */
 
 
@@ -599,15 +600,8 @@ void GPU::clear(float r,float g,float b,float a){
                 (uint8_t) (a * 255)}, x, y);
     }
   }
-  // for (size_t i = 0; i < size * 4; i+=4) {
-  //   frameBuffer.colorBuffer[i]   = (uint8_t) (1 * 255);
-  //   frameBuffer.colorBuffer[i+1] = (uint8_t) (g * 255);
-  //   frameBuffer.colorBuffer[i+2] = (uint8_t) (b * 255);
-  //   frameBuffer.colorBuffer[i+3] = (uint8_t) (a * 255); // FIXME: does this work?
-  // }
-  // clear the depth buffer
   for (size_t i = 0; i < size; i++) {
-    frameBuffer.depthBuffer[i] = 5.0f;
+    frameBuffer.depthBuffer[i] = 2.0f;
   }
 }
 
@@ -616,6 +610,10 @@ void GPU::drawTriangles(uint32_t  nofVertices){
   /// Vrcholy se budou vybírat podle nastavení z aktivního vertex pulleru (pomocí bindVertexPuller).<br>
   /// Vertex shader a fragment shader se zvolí podle aktivního shader programu (pomocí useProgram).<br>
   /// Parametr "nofVertices" obsahuje počet vrcholů, který by se měl vykreslit (3 pro jeden trojúhelník).<br>
+
+  // for (size_t i = 0; i < frameBuffer.height * frameBuffer.height; i++) {
+  //   frameBuffer.depthBuffer[i] = 1.0f;
+  // }
   auto outVertices = vertexPuller(nofVertices);
 }
 
@@ -696,7 +694,6 @@ void GPU::primitiveAssembly(std::vector<OutVertex> outVertices) {
   perspectiveDivision();
   viewportTransformation();
   rasterization();
-  fragmentProcessor();
   perFragmentOperation();
   triangles.clear();
 }
@@ -713,7 +710,7 @@ void GPU::clipping(Triangle triangle) {
     bool isInNearPlace = -vertex.gl_Position.w <= vertex.gl_Position.z;
     if (!isInNearPlace) {
       verticesToChange.push_back(vertex);
-      std::cout << verticesToChange.back().gl_Position.x << ", " << verticesToChange.back().gl_Position.y << ", " << verticesToChange.back().gl_Position.z << ", " << verticesToChange.back().gl_Position.w << std::endl;
+      std::cout << "nearPlace vertex: " << verticesToChange.back().gl_Position.x << ", " << verticesToChange.back().gl_Position.y << ", " << verticesToChange.back().gl_Position.z << ", " << verticesToChange.back().gl_Position.w << std::endl;
       ineqCount++;
     }
   }
@@ -721,9 +718,9 @@ void GPU::clipping(Triangle triangle) {
   bool isBInNearPlace = -B.gl_Position.w <= B.gl_Position.z;
   bool isCInNearPlace = -C.gl_Position.w <= C.gl_Position.z;
 
-  std::cout << A.gl_Position.x << ", " << A.gl_Position.y << ", " << A.gl_Position.z << ", " << A.gl_Position.w << std::endl;
-  std::cout << B.gl_Position.x << ", " << B.gl_Position.y << ", " << B.gl_Position.z << ", " << B.gl_Position.w << std::endl;
-  std::cout << C.gl_Position.x << ", " << C.gl_Position.y << ", " << C.gl_Position.z << ", " << C.gl_Position.w << std::endl;
+  // std::cout << A.gl_Position.x << ", " << A.gl_Position.y << ", " << A.gl_Position.z << ", " << A.gl_Position.w << std::endl;
+  // std::cout << B.gl_Position.x << ", " << B.gl_Position.y << ", " << B.gl_Position.z << ", " << B.gl_Position.w << std::endl;
+  // std::cout << C.gl_Position.x << ", " << C.gl_Position.y << ", " << C.gl_Position.z << ", " << C.gl_Position.w << std::endl;
   std::cout << "ineqcount: " << ineqCount << std::endl;
 
   OutVertex Ax, Bx, Cx, Xt1, Xt2;
@@ -790,8 +787,7 @@ OutVertex GPU::findClippedVertex(OutVertex A, OutVertex B) {
     case AttributeType::VEC4:
       Ax.attributes[i].v4 = A.attributes[i].v4 + t * (B.attributes[i].v4 - A.attributes[i].v4);
       break;
-    default:
-      break;
+    default: break;
     }
   }
   return Ax;
@@ -802,16 +798,10 @@ void GPU::perspectiveDivision() {
   for (auto &triangle : triangles) {
     for (auto &vertex : triangle) {
       auto &vector = vertex.gl_Position;
-      if (vector.w == 0) {
-        continue;
-      }
+      if (vector.w == 0) { continue; }
       vector.x /= vector.w;
       vector.y /= vector.w;
       vector.z /= vector.w;
-      // std::cerr << "divisionorex: " << vector.x << ","
-      // << vector.y << ","
-      // << vector.z << ","
-      // << vector.w << std::endl;
     }
   }
 }
@@ -855,16 +845,12 @@ void GPU::rasterization() {
         ymax = clamp(vector.y, 0, height);
       }
     }
-    // if (xmin == xmax) {
-    //   std::cout << "x same" << std::endl;
-    //   xmin--;
-    // }
-    // if (ymin == ymax) {
-    //   std::cout << "y same" << std::endl;
-    //   ymin--;
-    // }
     std::cout << "xmin: " << xmin << ", ymin: " << ymin << std::endl;
     std::cout << "xmax: " << xmax << ", ymax: " << ymax << std::endl;
+    // xmin = 0;
+    // xmax = width;
+    // ymin = 0;
+    // ymax = height;
 
     for (float y = ymin; y < ymax; y++) {
       for (float x = xmin; x < xmax; x++) {
@@ -877,14 +863,6 @@ void GPU::rasterization() {
   }
 }
 
-void GPU::fragmentProcessor() {
-
-}
-
-void GPU::perFragmentOperation() {
-
-}
-
 
 /* Helper functions for DrawTriangles functions */
 
@@ -892,90 +870,106 @@ void GPU::pinedaTriangle(Triangle triangle, glm::vec2 p) {
   auto vertex0 = triangle.at(0);
   auto vertex1 = triangle.at(1);
   auto vertex2 = triangle.at(2);
-  auto v0 = vertex0.gl_Position;
-  auto v1 = vertex1.gl_Position;
-  auto v2 = vertex2.gl_Position;
+  auto V0 = vertex0.gl_Position;
+  auto V1 = vertex1.gl_Position;
+  auto V2 = vertex2.gl_Position;
 
-  float area = edgeFunction(v0, v1, v2); // area of the triangle multiplied by 2
-  float w0 = edgeFunction(v1, v2, p); // signed area of the triangle v1v2p multiplied by 2
-  float w1 = edgeFunction(v2, v0, p); // signed area of the triangle v2v0p multiplied by 2
-  float w2 = edgeFunction(v0, v1, p); // signed area of the triangle v0v1p multiplied by 2
-  bool inside = (w0 >= 0 && w1 >= 0 && w2 >= 0);
+  float area = edgeFunction(V0, V1, V2); // area of the triangle multiplied by 2
+  float w0 = edgeFunction(V1, V2, p); // signed area of the triangle v1v2p multiplied by 2
+  float w1 = edgeFunction(V2, V0, p); // signed area of the triangle v2v0p multiplied by 2
+  float w2 = edgeFunction(V0, V1, p); // signed area of the triangle v0v1p multiplied by 2
 
-  // if point p is inside triangles defined by vertices v0, v1, v2
+  // float Eab = (p.x - V0.x) * (V1.y - V0.y) - (p.y - V0.y) * (V1.x - V0.x);
+  // float Ebc = (p.x - V1.x) * (V2.y - V1.y) - (p.y - V1.y) * (V2.x - V1.x);
+  // float Eca = (p.x - V2.x) * (V0.y - V2.y) - (p.y - V2.y) * (V0.x - V2.x);
+
+  bool inside = ((w0 >= 0 && w1 >= 0 && w2 >= 0) || (w0 < 0 && w1 < 0 && w2 < 0));
+  // inside = ((Eab >= 0 && Ebc >= 0 && Eca >= 0) || (Eab < 0 && Ebc < 0 && Eca < 0));
+
+  // if point p is inside triangles defined by vertices V0, V1, V2
   if (inside) {
-      // barycentric coordinates are the areas of the sub-triangles divided by the area of the main triangle
-      w0 /= area;
-      w1 /= area;
-      w2 /= area;
+    // barycentric coordinates are the areas of the sub-triangles divided by the area of the main triangle
+    w0 /= area;
+    w1 /= area;
+    w2 /= area;
 
-      InFragment inFragment;
-      inFragment.gl_FragCoord.x = p.x;
-      inFragment.gl_FragCoord.y = p.y;
-      auto program = programs.at(activeShader).get();
+    InFragment inFragment;
+    inFragment.gl_FragCoord.x = p.x;
+    inFragment.gl_FragCoord.y = p.y;
+    interpolate(inFragment, vertex0, vertex1, vertex2, w0, w1, w2);
 
-      float h0 = v0.w;
-      float h1 = v1.w;
-      float h2 = v2.w;
-      for (size_t i = 0; i < maxAttributes; i++) {
-        auto attributeType = program->vs2fs[i];
-        // TODO: check for active head
-        switch (attributeType)
-        {
-        case AttributeType::FLOAT:
-          inFragment.attributes[i].v1 =
-            (((vertex0.attributes[i].v1 * w0) / h0) +
-             ((vertex1.attributes[i].v1 * w1) / h1) +
-             ((vertex2.attributes[i].v1 * w2) / h2)) /
-            ((w0 / h0) + (w1 / h1) + (w2 / h2));
-          break;
-        case AttributeType::VEC2:
-          inFragment.attributes[i].v2 =
-            (((vertex0.attributes[i].v2 * w0) / h0) +
-             ((vertex1.attributes[i].v2 * w1) / h1) +
-             ((vertex2.attributes[i].v2 * w2) / h2)) /
-            ((w0 / h0) + (w1 / h1) + (w2 / h2));
-          break;
-        case AttributeType::VEC3:
-          inFragment.attributes[i].v3 =
-            (((vertex0.attributes[i].v3 * w0) / h0) +
-             ((vertex1.attributes[i].v3 * w1) / h1) +
-             ((vertex2.attributes[i].v3 * w2) / h2)) /
-            ((w0 / h0) + (w1 / h1) + (w2 / h2));
-          break;
-        case AttributeType::VEC4:
-          inFragment.attributes[i].v4 =
-            (((vertex0.attributes[i].v4 * w0) / h0) +
-             ((vertex1.attributes[i].v4 * w1) / h1) +
-             ((vertex2.attributes[i].v4 * w2) / h2)) /
-            ((w0 / h0) + (w1 / h1) + (w2 / h2));
-          break;
-        default:
-          break;
-        }
-      }
+    // Fragment Procesor
+    OutFragment outFragment;
+    fragmentProcessor(outFragment, inFragment);
 
-      OutFragment outFragment;
-      program->fs(outFragment, inFragment, program->uniforms);
+    if (inFragment.gl_FragCoord.z < getDepth((int) p.x, (int) p.y)) {
       // get color
       uint8_t r = (uint8_t) (clamp(outFragment.gl_FragColor.r, 0, 1) * 255);
       uint8_t g = (uint8_t) (clamp(outFragment.gl_FragColor.g, 0, 1) * 255);
       uint8_t b = (uint8_t) (clamp(outFragment.gl_FragColor.b, 0, 1) * 255);
       uint8_t a = (uint8_t) (clamp(outFragment.gl_FragColor.a, 0, 1) * 255);
-      // std::cout << "r: " << outFragment.gl_FragColor.r << ", g: "
-      //           << outFragment.gl_FragColor.g << ", b: "
-      //           << outFragment.gl_FragColor.b << ", a: "
-      //           << outFragment.gl_FragColor.a << std::endl;
       putPixel({r, g, b, a}, (int) p.x, (int) p.y);
+      putDepth(inFragment.gl_FragCoord.z, (int) p.x, (int) p.y);
+    }
   }
 }
 
-// Source: https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/rasterization-stage
-inline bool GPU::edgeFunction(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c)
-{
-    return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
-    // return (a.x - b.x) * (c.y - a.y) - (a.y - b.y) * (c.x - a.x);
+void GPU::interpolate(InFragment &inFragment, OutVertex V0, OutVertex V1, OutVertex V2, float w0, float w1, float w2) {
+  auto program = programs.at(activeShader).get();
+
+  float h0 = V0.gl_Position.w;
+  float h1 = V1.gl_Position.w;
+  float h2 = V2.gl_Position.w;
+  // interpolate attributes
+  for (size_t i = 0; i < program->vs2fs.size(); i++) {
+    auto attributeType = program->vs2fs[i];
+    // TODO: check for active head
+    // TODO: move formula into seperate function
+    switch (attributeType)
+    {
+    case AttributeType::FLOAT:
+      inFragment.attributes[i].v1 =
+        (((V0.attributes[i].v1 * w0) / h0) + ((V1.attributes[i].v1 * w1) / h1) +
+         ((V2.attributes[i].v1 * w2) / h2)) / ((w0 / h0) + (w1 / h1) + (w2 / h2));
+      break;
+    case AttributeType::VEC2:
+      inFragment.attributes[i].v2 =
+        (((V0.attributes[i].v2 * w0) / h0) + ((V1.attributes[i].v2 * w1) / h1) +
+         ((V2.attributes[i].v2 * w2) / h2)) / ((w0 / h0) + (w1 / h1) + (w2 / h2));
+      break;
+    case AttributeType::VEC3:
+      inFragment.attributes[i].v3 =
+        (((V0.attributes[i].v3 * w0) / h0) + ((V1.attributes[i].v3 * w1) / h1) +
+         ((V2.attributes[i].v3 * w2) / h2)) / ((w0 / h0) + (w1 / h1) + (w2 / h2));
+      break;
+    case AttributeType::VEC4:
+      inFragment.attributes[i].v4 =
+        (((V0.attributes[i].v4 * w0) / h0) + ((V1.attributes[i].v4 * w1) / h1) +
+         ((V2.attributes[i].v4 * w2) / h2)) / ((w0 / h0) + (w1 / h1) + (w2 / h2));
+      break;
+    default: break;
+    }
+  }
+  // interpolate Z
+  inFragment.gl_FragCoord.z = (((V0.gl_Position.z * w0) / h0) + ((V1.gl_Position.z * w1) / h1) +
+     ((V2.gl_Position.z * w2) / h2)) / ((w0 / h0) + (w1 / h1) + (w2 / h2));
 }
+
+void GPU::fragmentProcessor(OutFragment &outFragment, InFragment &inFragment) {
+  auto program = programs.at(activeShader).get();
+  program->fs(outFragment, inFragment, program->uniforms);
+}
+
+void GPU::perFragmentOperation() {
+
+}
+// Source: https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/rasterization-stage
+float GPU::edgeFunction(glm::vec4 a, glm::vec4 b, glm::vec2 p)
+{
+  return (p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x);
+  // return (a.x - b.x) * (p.y - a.y) - (a.y - b.y) * (p.x - a.x);
+}
+
 
 void GPU::putPixel(RGBA rgba, int x, int y) {
 	if (x >= 0 && y >= 0 && x < frameBuffer.width && y < frameBuffer.height) {
@@ -999,5 +993,18 @@ GPU::RGBA GPU::getPixel(int x, int y) {
   }
 }
 
+void GPU::putDepth(uint8_t depth, int x, int y) {
+  if (x >= 0 && y >- 0 && x < frameBuffer.width && y < frameBuffer.height) {
+    frameBuffer.depthBuffer[(y * frameBuffer.width + x)] = depth;
+  }
+}
+
+uint8_t GPU::getDepth(int x, int y) {
+  if (x >= 0 && y >- 0 && x < frameBuffer.width && y < frameBuffer.height) {
+    return frameBuffer.depthBuffer[(y * frameBuffer.width + x)];
+  } else {
+    return 0;
+  }
+}
 
 /// @}

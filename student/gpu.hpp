@@ -84,19 +84,22 @@ class GPU{
     void perspectiveDivision();
     void viewportTransformation();
     void rasterization();
-    void fragmentProcessor();
+    void fragmentProcessor(OutFragment &outFragment, InFragment &inFragment);
     void perFragmentOperation();
 
     OutVertex findClippedVertex(OutVertex A, OutVertex B);
+    void interpolate(InFragment &inFragment, OutVertex V0, OutVertex V1, OutVertex V2, float w0, float w1, float w2);
 
     typedef std::array<uint8_t, 4> RGBA;
 
     void pinedaTriangle(Triangle triangle, glm::vec2 p);
-    inline bool edgeFunction(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c);
+    float edgeFunction(const glm::vec4 a, const glm::vec4 b, const glm::vec2 p);
 
 
     void putPixel(RGBA rgba, int x, int y);
     RGBA getPixel(int x, int y);
+    uint8_t getDepth(int x, int y);
+    void putDepth(uint8_t depth, int x, int y);
 
   private:
     struct Indexing {
