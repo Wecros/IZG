@@ -25,7 +25,10 @@ class PhongMethod: public Method{
 
 
     /// \todo Zde si vytvořte proměnné, které budete potřebovat (id bufferů, programu, ...)
-
+    VertexPullerID vao;
+    ProgramID prg;
+    BufferID vbo;  // vertex buffer for bunny
+    BufferID ebo;  // index buffer for bunny
 };
 
 /// @}

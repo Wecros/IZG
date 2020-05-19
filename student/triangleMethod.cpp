@@ -57,4 +57,3 @@ void TriangleMethod::onDraw(glm::mat4 const&proj,glm::mat4 const&view,glm::vec3 
 
   gpu.unbindVertexPuller();
 }
-

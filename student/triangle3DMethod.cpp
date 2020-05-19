@@ -19,7 +19,7 @@ void triangle3d_VS(OutVertex&outVertex,InVertex const&inVertex,Uniforms const&un
 
   glm::mat4 viewMatrix       = uniforms.uniform[3].m4;
   glm::mat4 projectionMatrix = uniforms.uniform[2].m4;
- 
+
   glm::mat4 mvp = projectionMatrix * viewMatrix;
 
   glm::vec4 pos;

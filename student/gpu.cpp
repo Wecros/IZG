@@ -836,8 +836,8 @@ void GPU::rasterization() {
       }
     }
 
-    for (float y = ymin; y < ymax; y++) {
-      for (float x = xmin; x < xmax; x++) {
+    for (size_t y = ymin; y < ymax; y++) {
+      for (size_t x = xmin; x < xmax; x++) {
         glm::vec2 pixel;
         pixel.x = x + 0.5f;
         pixel.y = y + 0.5f;
@@ -863,12 +863,7 @@ void GPU::pinedaTriangle(Triangle triangle, glm::vec2 p) {
   float w1 = edgeFunction(V2, V0, p); // signed area of the triangle v2v0p multiplied by 2
   float w2 = edgeFunction(V0, V1, p); // signed area of the triangle v0v1p multiplied by 2
 
-  // float Eab = (p.x - V0.x) * (V1.y - V0.y) - (p.y - V0.y) * (V1.x - V0.x);
-  // float Ebc = (p.x - V1.x) * (V2.y - V1.y) - (p.y - V1.y) * (V2.x - V1.x);
-  // float Eca = (p.x - V2.x) * (V0.y - V2.y) - (p.y - V2.y) * (V0.x - V2.x);
-
   bool inside = ((w0 >= 0 && w1 >= 0 && w2 >= 0) || (w0 < 0 && w1 < 0 && w2 < 0));
-  // inside = ((Eab >= 0 && Ebc >= 0 && Eca >= 0) || (Eab < 0 && Ebc < 0 && Eca < 0));
 
   // if point p is inside triangles defined by vertices V0, V1, V2
   if (inside) {
