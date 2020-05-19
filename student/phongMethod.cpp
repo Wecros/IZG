@@ -158,9 +158,17 @@ PhongMethod::PhongMethod(){
 ///  - gpu.createProgram()
 ///  - gpu.attachShaders()
 ///  - gpu.setVS2FSType()
+  // buffers init
+  const auto verticesSize = sizeof(bunnyVertices);
+  vbo = gpu.createBuffer(verticesSize);
+  gpu.setBufferData(vbo, 0, verticesSize, bunnyVertices);
+  const auto indicesSize = sizeof(bunnyIndices);
+  ebo = gpu.createBuffer(indicesSize);
+  gpu.setBufferData(ebo, 0, indicesSize, bunnyIndices);
+
   // vertex puller init
   vao = gpu.createVertexPuller();
-  gpu.setVertexPullerIndexing(vao, IndexType::UINT32, vbo);
+  gpu.setVertexPullerIndexing(vao, IndexType::UINT32, ebo);
   const unsigned verticesPosHead = 0;
   const unsigned verticesNormalHead = 1;
   gpu.setVertexPullerHead(vao, verticesPosHead,
@@ -175,14 +183,6 @@ PhongMethod::PhongMethod(){
   gpu.attachShaders(prg, phong_VS, phong_FS);
   gpu.setVS2FSType(prg, 0, AttributeType::VEC3);
   gpu.setVS2FSType(prg, 1, AttributeType::VEC3);
-
-  // buffers init
-  auto const verticesSize = sizeof(bunnyVertices);
-  vbo = gpu.createBuffer(verticesSize);
-  gpu.setBufferData(vbo, 0, verticesSize, (void *) bunnyVertices);
-  auto const indicesSize = sizeof(bunnyIndices);
-  ebo = gpu.createBuffer(indicesSize);
-  gpu.setBufferData(ebo, 0, indicesSize, (void *) bunnyIndices);
 }
 
 
@@ -214,15 +214,15 @@ void PhongMethod::onDraw(glm::mat4 const&proj,glm::mat4 const&view,glm::vec3 con
   gpu.useProgram(prg);
 
   // auto mvp = proj*view;
+  gpu.programUniformMatrix4f(prg, 0, proj);
   gpu.programUniformMatrix4f(prg, 1, view);
-  gpu.programUniformMatrix4f(prg, 2, proj);
-  gpu.programUniform3f(prg, 3, light);
-  gpu.programUniform3f(prg, 4, camera);
+  gpu.programUniform3f(prg, 2, light);
+  gpu.programUniform3f(prg, 3, camera);
 
   const unsigned verticesRows = sizeof(bunnyIndices) / sizeof(bunnyIndices[0]);
   const unsigned verticesCols = sizeof(bunnyIndices[0]) / sizeof(bunnyIndices[0][0]);
   const unsigned bunnyVertices = verticesRows * verticesCols;
-  // gpu.drawTriangles(bunnyVertices);
+  gpu.drawTriangles(bunnyVertices);
   gpu.unbindVertexPuller();
 }
 
