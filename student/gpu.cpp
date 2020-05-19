@@ -4,7 +4,7 @@
  *
  * @author Tomáš Milet, imilet@fit.vutbr.cz
  *         Marek Filip, xfilip46@stud.fit.vutbr.cz
- * @date   2020-May-11
+ * @date   2020-May-19
  */
 
 #include <student/gpu.hpp>
@@ -675,10 +675,6 @@ std::vector<OutVertex> GPU::vertexPuller(uint32_t nofVertices) {
 void GPU::vertexProcessor(OutVertex &outVertex, InVertex &inVertex) {
   auto program = programs.at(activeShader).get();
   program->vs(outVertex, inVertex, program->uniforms);
-  // std::cerr << "vectorex: " << outVertex.gl_Position.x << ","
-  //           << outVertex.gl_Position.y << ","
-  //           << outVertex.gl_Position.z << ","
-  //           << outVertex.gl_Position.w << "," << std::endl;
 }
 
 // Take 3 consecutive out vertices and build them into a triangle.
@@ -703,25 +699,18 @@ void GPU::clipping(Triangle triangle) {
   auto A = triangle.at(0);
   auto B = triangle.at(1);
   auto C = triangle.at(2);
-
   int ineqCount = 0;
   std::vector<OutVertex> verticesToChange;
   for (auto vertex : triangle) {
     bool isInNearPlace = -vertex.gl_Position.w <= vertex.gl_Position.z;
     if (!isInNearPlace) {
       verticesToChange.push_back(vertex);
-      std::cout << "nearPlace vertex: " << verticesToChange.back().gl_Position.x << ", " << verticesToChange.back().gl_Position.y << ", " << verticesToChange.back().gl_Position.z << ", " << verticesToChange.back().gl_Position.w << std::endl;
       ineqCount++;
     }
   }
   bool isAInNearPlace = -A.gl_Position.w <= A.gl_Position.z;
   bool isBInNearPlace = -B.gl_Position.w <= B.gl_Position.z;
   bool isCInNearPlace = -C.gl_Position.w <= C.gl_Position.z;
-
-  // std::cout << A.gl_Position.x << ", " << A.gl_Position.y << ", " << A.gl_Position.z << ", " << A.gl_Position.w << std::endl;
-  // std::cout << B.gl_Position.x << ", " << B.gl_Position.y << ", " << B.gl_Position.z << ", " << B.gl_Position.w << std::endl;
-  // std::cout << C.gl_Position.x << ", " << C.gl_Position.y << ", " << C.gl_Position.z << ", " << C.gl_Position.w << std::endl;
-  std::cout << "ineqcount: " << ineqCount << std::endl;
 
   OutVertex Ax, Bx, Cx, Xt1, Xt2;
   Triangle t1, t2, t;
@@ -763,13 +752,16 @@ void GPU::clipping(Triangle triangle) {
     }
     triangles.clear();
     triangles.push_back(t);
+  } else if (ineqCount == 3) {
+    // the whole triangle is outside the view, clip it away
+    triangles.clear();
   }
 }
 
 OutVertex GPU::findClippedVertex(OutVertex A, OutVertex B) {
   OutVertex Ax;
   float t = (-A.gl_Position.w - A.gl_Position.z) /
-            (B.gl_Position.w + B.gl_Position.z - A.gl_Position.z);
+            (B.gl_Position.w - A.gl_Position.w + B.gl_Position.z - A.gl_Position.z);
   Ax.gl_Position = A.gl_Position + t * (B.gl_Position - A.gl_Position);
   auto activePrg = programs.at(activeShader).get();
   for (size_t i = 0; i < activePrg->vs2fs.size(); i++) {
@@ -811,7 +803,6 @@ void GPU::viewportTransformation() {
   for (auto &triangle : triangles) {
     for (auto &vertex : triangle) {
       auto &vector = vertex.gl_Position;
-      std::cerr << vector.x << ", " << vector.y << std::endl;
       vector.x *= frameBuffer.width  / 2;
       vector.y *= frameBuffer.height / 2;
       vector.x += frameBuffer.width  / 2;
@@ -831,7 +822,6 @@ void GPU::rasterization() {
     float ymax = 0;
     for (auto vertex : triangle) {
       auto vector = vertex.gl_Position;
-      std::cout << "x: " << vector.x << ", y: " << vector.y << std::endl;
       if (vector.x < xmin) {
         xmin = clamp(vector.x, 0, width);
       }
@@ -845,12 +835,6 @@ void GPU::rasterization() {
         ymax = clamp(vector.y, 0, height);
       }
     }
-    std::cout << "xmin: " << xmin << ", ymin: " << ymin << std::endl;
-    std::cout << "xmax: " << xmax << ", ymax: " << ymax << std::endl;
-    // xmin = 0;
-    // xmax = width;
-    // ymin = 0;
-    // ymax = height;
 
     for (float y = ymin; y < ymax; y++) {
       for (float x = xmin; x < xmax; x++) {
@@ -909,6 +893,8 @@ void GPU::pinedaTriangle(Triangle triangle, glm::vec2 p) {
       uint8_t b = (uint8_t) (clamp(outFragment.gl_FragColor.b, 0, 1) * 255);
       uint8_t a = (uint8_t) (clamp(outFragment.gl_FragColor.a, 0, 1) * 255);
       putPixel({r, g, b, a}, (int) p.x, (int) p.y);
+      if (inFragment.gl_FragCoord.z == -1.f) {
+      }
       putDepth(inFragment.gl_FragCoord.z, (int) p.x, (int) p.y);
     }
   }
@@ -993,15 +979,15 @@ GPU::RGBA GPU::getPixel(int x, int y) {
   }
 }
 
-void GPU::putDepth(uint8_t depth, int x, int y) {
+void GPU::putDepth(float depth, int x, int y) {
   if (x >= 0 && y >- 0 && x < frameBuffer.width && y < frameBuffer.height) {
-    frameBuffer.depthBuffer[(y * frameBuffer.width + x)] = depth;
+    frameBuffer.depthBuffer[y * frameBuffer.width + x] = depth;
   }
 }
 
-uint8_t GPU::getDepth(int x, int y) {
+float GPU::getDepth(int x, int y) {
   if (x >= 0 && y >- 0 && x < frameBuffer.width && y < frameBuffer.height) {
-    return frameBuffer.depthBuffer[(y * frameBuffer.width + x)];
+    return frameBuffer.depthBuffer[y * frameBuffer.width + x];
   } else {
     return 0;
   }

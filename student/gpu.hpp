@@ -4,7 +4,7 @@
  *
  * @author Tomáš Milet, imilet@fit.vutbr.cz
  *         Marek Filip, xfilip46@stud.fit.vutbr.cz
- * @date   2020-May-11
+ * @date   2020-May-19
  */
 #pragma once
 
@@ -98,8 +98,8 @@ class GPU{
 
     void putPixel(RGBA rgba, int x, int y);
     RGBA getPixel(int x, int y);
-    uint8_t getDepth(int x, int y);
-    void putDepth(uint8_t depth, int x, int y);
+    float getDepth(int x, int y);
+    void putDepth(float depth, int x, int y);
 
   private:
     struct Indexing {

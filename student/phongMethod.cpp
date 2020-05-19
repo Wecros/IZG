@@ -4,7 +4,7 @@
  *
  * @author Tomáš Milet, imilet@fit.vutbr.cz
  *         Marek Filip, xfilip46@stud.fit.vutbr.cz
- * @date   2020-May-11
+ * @date   2020-May-19
  */
 
 #include <student/phongMethod.hpp>

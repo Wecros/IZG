@@ -175,7 +175,7 @@ SCENARIO("rasterization should create fragments that are inside triangle (gl_Fra
   gpu->attachShaders(prg,vertexShaderInterp,fragmentShaderInterp);
   gpu->bindVertexPuller(vao);
 
-  
+
   samplingLocations.clear();
   samplingLocations.push_back({0 ,0 });
   samplingLocations.push_back({98,0 });
@@ -329,7 +329,7 @@ SCENARIO("per fragment operations should eliminate fragments that do not pass de
   auto prg = gpu->createProgram();
   gpu->attachShaders(prg,vertexShaderTri,fragmentShaderWhite);
   gpu->bindVertexPuller(vao);
-  
+
   auto fcolor = gpu->getFramebufferColor();
   auto fdepth = gpu->getFramebufferDepth();
 
