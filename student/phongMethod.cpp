@@ -59,7 +59,40 @@ void phong_VS(OutVertex&outVertex,InVertex const&inVertex,Uniforms const&uniform
   /// Vrchol v clip-space by měl být zapsán do proměnné gl_Position ve výstupní
   /// struktuře.
   /// \image html images/vertex_shader_tasks.svg "Vizualizace vstupů a výstupů vertex shaderu" width=1000
+  const auto inPosition = inVertex.attributes[0].v4;
+  const auto inNormal = inVertex.attributes[1].v4;
+  const auto view = uniforms.uniform[0].m4;
+  const auto projection = uniforms.uniform[1].m4;
+  auto &outGl_Position = outVertex.gl_Position;
+  auto &outPosition = outVertex.attributes[0].v4;
+  auto &outNormal = outVertex.attributes[1].v4;
 
+  outGl_Position = projection * view * inPosition;
+  outPosition = inPosition;
+  outNormal = inNormal;
+}
+
+PhongMethod::RGB getSineTextureColors(float x, float y) {
+  PhongMethod::RGB rgb;
+  float offset = sin(y * 10) / 10;
+  // add the offset to x and  multiply it by 5 to make it 10-stripe texture
+  x = (x + offset) * 5;
+
+  if (glm::fract(x) > 0.5) {
+    rgb = {1, 1, 0};
+  } else {
+    rgb = {0, 0.5, 0};
+  }
+  return rgb;
+}
+
+float getInterpolarityParam(float y) {
+  // normal is facing upright or horizontally from the triangle, not down
+  float t = 0;
+  if (y > 0 || y <= 1) {
+    t = y * y;
+  }
+  return t;
 }
 
 /**
@@ -120,9 +153,49 @@ void phong_FS(OutFragment&outFragment,InFragment const&inFragment,Uniforms const
   /// Nepoužívejte ambientní světlo.<br>
   ///
   /// \image html images/fragment_shader_tasks.svg "Vizualizace výpočtu ve fragment shaderu" width=1000
+  const auto inPosition = inFragment.attributes[0].v3;
+  const auto inNormal = inFragment.attributes[1].v3;
+  const auto light = uniforms.uniform[2].v3;
+  const auto camera = uniforms.uniform[3].v3;
+  float &r = outFragment.gl_FragColor.r;
+  float &g = outFragment.gl_FragColor.g;
+  float &b = outFragment.gl_FragColor.b;
 
+  auto textureRGB = getSineTextureColors(inPosition.x, inPosition.y);
+  auto t = getInterpolarityParam(inNormal.y);
 
+  r = t + (textureRGB.at(0) * (1.f - t));
+  g = t + (textureRGB.at(1) * (1.f - t));
+  b = t + (textureRGB.at(2) * (1.f - t));
+
+  // phong reflection
+  const float shininess = 40.f;
+  auto N = glm::normalize(inNormal);
+  auto L = glm::normalize(light - inPosition);
+  auto V = glm::normalize(camera - inPosition);
+
+  float diffuse = std::max(0.f, glm::dot(L, N));
+  auto R = glm::normalize(2 * diffuse * N - L);
+  float specular = std::max(0.f, std::pow(std::max(0.f, glm::dot(R, V)), shininess));
+
+  outFragment.gl_FragColor *= diffuse;
+
+  // to prevent light shining from below the bunny, only add specular to nonblack
+  if (r != 0 || g != 0 || b != 0) {
+    outFragment.gl_FragColor += specular;
+  }
+
+  // clamp the values
+  r = std::min(1.f, r);
+  g = std::min(1.f, g);
+  b = std::min(1.f, b);
+  // r = std::min(std::max(r, 0.f), 1.f);
+  // g = std::min(std::max(g, 0.f), 1.f);
+  // b = std::min(std::max(b, 0.f), 1.f);
 }
+
+
+
 
 /// @}
 
@@ -213,9 +286,8 @@ void PhongMethod::onDraw(glm::mat4 const&proj,glm::mat4 const&view,glm::vec3 con
   gpu.bindVertexPuller(vao);
   gpu.useProgram(prg);
 
-  // auto mvp = proj*view;
-  gpu.programUniformMatrix4f(prg, 0, proj);
-  gpu.programUniformMatrix4f(prg, 1, view);
+  gpu.programUniformMatrix4f(prg, 0, view);
+  gpu.programUniformMatrix4f(prg, 1, proj);
   gpu.programUniform3f(prg, 2, light);
   gpu.programUniform3f(prg, 3, camera);
 

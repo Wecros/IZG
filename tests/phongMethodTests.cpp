@@ -219,7 +219,7 @@ SCENARIO("fragment shader should compute correct texture - yellow sin stripes"){
 SCENARIO("fragment shader should compute correct color for backfacing triangles"){
   std::cerr << "34 - phongMethod - fragment shader backfacing triangles" << std::endl;
   Uniforms u;
-  
+
   OutFragment outFragment;
   InFragment inFragment;
 
@@ -241,7 +241,7 @@ SCENARIO("fragment shader should compute correct color for backfacing triangles"
 SCENARIO("fragment shader should compute correct color for specular reflections"){
   std::cerr << "35 - phongMethod - fragment shader specular reflections" << std::endl;
   Uniforms u;
-  
+
   OutFragment outFragment;
   InFragment inFragment;
 
@@ -263,7 +263,7 @@ SCENARIO("fragment shader should compute correct color for specular reflections"
 SCENARIO("fragment shader should not compute specular reflection for backfacing triangles"){
   std::cerr << "36 - phongMethod - fragment shader backfacing specular reflections" << std::endl;
   Uniforms u;
-  
+
   OutFragment outFragment;
   InFragment inFragment;
 
@@ -286,7 +286,7 @@ SCENARIO("fragment shader should not compute specular reflection for backfacing 
 SCENARIO("fragment shader should not compute specular reflection for black triangles"){
   std::cerr << "37 - phongMethod - fragment shader black triangles" << std::endl;
   Uniforms u;
-  
+
   OutFragment outFragment;
   InFragment inFragment;
 
@@ -306,7 +306,7 @@ SCENARIO("fragment shader should not compute specular reflection for black trian
 SCENARIO("fragment shader should normalize normals"){
   std::cerr << "38 - phongMethod - fragment shader should normalize normals" << std::endl;
   Uniforms u;
-  
+
   OutFragment outFragment;
   InFragment inFragment;
 
@@ -329,7 +329,7 @@ SCENARIO("fragment shader should normalize normals"){
 SCENARIO("fragment shader lighting should not depend on the distance to the viewer"){
   std::cerr << "39 - phongMethod - distance to the viewer" << std::endl;
   Uniforms u;
-  
+
   OutFragment outFragment;
   InFragment inFragment;
 
@@ -349,7 +349,7 @@ SCENARIO("fragment shader lighting should not depend on the distance to the view
 SCENARIO("fragment shader lighting should not depend on the distance to the light"){
   std::cerr << "40 - phongMethod - distance to the light" << std::endl;
   Uniforms u;
-  
+
   OutFragment outFragment;
   InFragment inFragment;
 
@@ -410,6 +410,7 @@ SCENARIO("phong method should render correct image"){
     SDL_FreeSurface(groundTruth);
 
     REQUIRE(meanSquareError < 40.f);
+    std::cout << "error: " << meanSquareError << std::endl;
   }
 
 }

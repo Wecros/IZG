@@ -29,6 +29,8 @@ class PhongMethod: public Method{
     ProgramID prg;
     BufferID vbo;  // vertex buffer for bunny
     BufferID ebo;  // index buffer for bunny
+
+    typedef std::array<float, 3> RGB;
 };
 
 /// @}

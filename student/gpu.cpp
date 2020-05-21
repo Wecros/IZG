@@ -628,12 +628,12 @@ std::vector<OutVertex> GPU::vertexPuller(uint32_t nofVertices) {
   inVertex.gl_VertexID = 0;   // current inVertex ID
 
   // inVertexID = counter for vertexPuller invocation count
-  for (uint32_t inVertexID = 0; inVertexID < nofVertices; inVertexID++) {
+  for (uint32_t i = 0; i < nofVertices; i++) {
     if (vaoIndexing) {
-        getBufferData(vao->indexing.bufferID, inVertexID * (uint32_t) vao->indexing.indexType,
+        getBufferData(vao->indexing.bufferID, i * (uint32_t) vao->indexing.indexType,
           (uint64_t) vao->indexing.indexType, &inVertex.gl_VertexID);
     } else {
-      inVertex.gl_VertexID = inVertexID;
+      inVertex.gl_VertexID = i;
     }
 
     for (size_t j = 0; j < maxAttributes; j++) {
