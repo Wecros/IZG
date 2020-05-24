@@ -103,4 +103,3 @@ SCENARIO("GPU buffer data tests"){
 
   gpu.deleteBuffer(b);
 }
-

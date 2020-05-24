@@ -189,9 +189,6 @@ void phong_FS(OutFragment&outFragment,InFragment const&inFragment,Uniforms const
   r = std::min(1.f, r);
   g = std::min(1.f, g);
   b = std::min(1.f, b);
-  // r = std::min(std::max(r, 0.f), 1.f);
-  // g = std::min(std::max(g, 0.f), 1.f);
-  // b = std::min(std::max(b, 0.f), 1.f);
 }
 
 

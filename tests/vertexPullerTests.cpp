@@ -66,4 +66,3 @@ SCENARIO("GPU vertex puller id tests"){
     REQUIRE(gpu.isBuffer(x) == false);
   }
 }
-

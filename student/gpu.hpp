@@ -75,31 +75,6 @@ class GPU{
     /// \todo zde si můžete vytvořit proměnné grafické karty (buffery, programy, ...)
     /// @}
 
-    typedef std::array<OutVertex, 3> Triangle;
-
-    std::vector<OutVertex> vertexPuller(uint32_t nofVertices);
-    void vertexProcessor(OutVertex &outVertex, InVertex &inVertex);
-    void primitiveAssembly(std::vector<OutVertex> outVertices);
-    void clipping(Triangle triangle);
-    void perspectiveDivision();
-    void viewportTransformation();
-    void rasterization();
-    void fragmentProcessor(OutFragment &outFragment, InFragment &inFragment);
-    void perFragmentOperation();
-
-    OutVertex findClippedVertex(OutVertex A, OutVertex B);
-    void interpolate(InFragment &inFragment, OutVertex V0, OutVertex V1, OutVertex V2, float w0, float w1, float w2);
-
-    typedef std::array<uint8_t, 4> RGBA;
-
-    void pinedaTriangle(Triangle triangle, glm::vec2 p);
-    float edgeFunction(const glm::vec4 a, const glm::vec4 b, const glm::vec2 p);
-
-
-    void putPixel(RGBA rgba, int x, int y);
-    RGBA getPixel(int x, int y);
-    float getDepth(int x, int y);
-    void putDepth(float depth, int x, int y);
 
   private:
     struct Indexing {
@@ -149,11 +124,31 @@ class GPU{
 
     FrameBuffer frameBuffer;
 
-    // #define triangleVertices 3
+    typedef std::array<OutVertex, 3> Triangle;
     std::vector<Triangle> triangles;
 
+    std::vector<OutVertex> vertexPuller(uint32_t nofVertices);
+    void vertexProcessor(OutVertex &outVertex, InVertex &inVertex);
+    void primitiveAssembly(std::vector<OutVertex> outVertices);
+    void clipping(Triangle triangle);
+    void perspectiveDivision(OutVertex &vertex);
+    void viewportTransformation(OutVertex &vertex);
+    void rasterization();
+    void fragmentProcessor(OutFragment &outFragment, InFragment &inFragment);
+    void perFragmentOperation();
 
-    inline float clamp(float x, float min, float max) {
-      return std::min(std::max(x, min), max);
-    }
+    OutVertex findClippedVertex(OutVertex A, OutVertex B);
+    void interpolate(InFragment &inFragment, OutVertex V0, OutVertex V1, OutVertex V2, float w0, float w1, float w2);
+
+    typedef std::array<uint8_t, 4> RGBA;
+
+    void pinedaTriangle(Triangle triangle, glm::vec2 p);
+    float edgeFunction(const glm::vec4 a, const glm::vec4 b, const glm::vec2 p);
+
+
+    void putPixel(RGBA rgba, int x, int y);
+    RGBA getPixel(int x, int y);
+    float getDepth(int x, int y);
+    void putDepth(float depth, int x, int y);
+    float clamp(float x, float min, float max);
 };

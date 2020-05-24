@@ -25,7 +25,8 @@
  */
 GPU::GPU(){
   /// \todo Zde můžete alokovat/inicializovat potřebné proměnné grafické karty
-
+  frameBuffer.colorBuffer = nullptr;
+  frameBuffer.depthBuffer = nullptr;
 }
 
 /**
@@ -33,9 +34,15 @@ GPU::GPU(){
  */
 GPU::~GPU(){
   /// \todo Zde můžete dealokovat/deinicializovat grafickou kartu
-  buffers.clear();  // does this deallocate correctly?
-  vertexPullers.clear();
-  programs.clear();
+  if (!buffers.empty()) {
+    auto bufferIt = buffers.begin();
+    while (bufferIt != buffers.end()) {
+      deleteBuffer(bufferIt->first);
+      bufferIt = buffers.begin();
+    }
+  }
+
+  deleteFramebuffer();
 }
 
 /// @}
@@ -72,8 +79,11 @@ void GPU::deleteBuffer(BufferID buffer) {
   /// \todo Tato funkce uvolní buffer na grafické kartě.
   /// Buffer pro smazání je vybrán identifikátorem v parameteru "buffer".
   /// Po uvolnění bufferu je identifikátor volný a může být znovu použit při vytvoření nového bufferu.
-  free(buffers[buffer]);
-  buffers.erase(buffer);
+  auto bufferIt = buffers.find(buffer);
+  if (bufferIt != buffers.end()) {
+    free(bufferIt->second);
+    buffers.erase(buffer);
+  }
 }
 
 /**
@@ -506,8 +516,16 @@ void GPU::createFramebuffer(uint32_t width,uint32_t height){
  */
 void GPU::deleteFramebuffer(){
   /// \todo tato funkce by měla dealokovat framebuffer.
-  delete[] frameBuffer.colorBuffer;
-  delete[] frameBuffer.depthBuffer;
+  frameBuffer.width = 0;
+  frameBuffer.height = 0;
+  if (frameBuffer.colorBuffer != nullptr) {
+    delete[] frameBuffer.colorBuffer;
+    frameBuffer.colorBuffer = nullptr;
+  }
+  if (frameBuffer.depthBuffer != nullptr) {
+    delete[] frameBuffer.depthBuffer;
+    frameBuffer.depthBuffer = nullptr;
+  }
 }
 
 /**
@@ -519,14 +537,16 @@ void GPU::deleteFramebuffer(){
 void GPU::resizeFramebuffer(uint32_t width,uint32_t height){
   /// \todo Tato funkce by měla změnit velikost framebuffer.
   // set the new width and height
-  const auto size = width * height;
-  frameBuffer.width = width;
-  frameBuffer.height = height;
-  // reallocated space for color and depth buffers
-  delete[] frameBuffer.colorBuffer;
-  delete[] frameBuffer.depthBuffer;
-  frameBuffer.colorBuffer = new uint8_t[size*4];
-  frameBuffer.depthBuffer = new float[size];
+  deleteFramebuffer();
+  createFramebuffer(width, height);
+  // const auto size = width * height;
+  // frameBuffer.width = width;
+  // frameBuffer.height = height;
+  // // reallocated space for color and depth buffers
+  // delete[] frameBuffer.colorBuffer;
+  // delete[] frameBuffer.depthBuffer;
+  // frameBuffer.colorBuffer = new uint8_t[size*4];
+  // frameBuffer.depthBuffer = new float[size];
 }
 
 /**
@@ -614,7 +634,10 @@ void GPU::drawTriangles(uint32_t  nofVertices){
   // for (size_t i = 0; i < frameBuffer.height * frameBuffer.height; i++) {
   //   frameBuffer.depthBuffer[i] = 1.0f;
   // }
-  auto outVertices = vertexPuller(nofVertices);
+  if (frameBuffer.colorBuffer != nullptr && frameBuffer.depthBuffer != nullptr) {
+    auto outVertices = vertexPuller(nofVertices);
+
+  }
 }
 
 // Load the vertices data into in vertices that are transformed into out vertices.
@@ -668,6 +691,7 @@ std::vector<OutVertex> GPU::vertexPuller(uint32_t nofVertices) {
       outVertices.clear();
     }
   }
+  outVertices.clear();
   return outVertices;
 }
 
@@ -687,8 +711,6 @@ void GPU::primitiveAssembly(std::vector<OutVertex> outVertices) {
     triangles.push_back(triangle);
   }
   clipping(triangles.at(0));
-  perspectiveDivision();
-  viewportTransformation();
   rasterization();
   perFragmentOperation();
   triangles.clear();
@@ -786,41 +808,36 @@ OutVertex GPU::findClippedVertex(OutVertex A, OutVertex B) {
 }
 
 // Transform homogenous coordinates to Cartesian coordinates
-void GPU::perspectiveDivision() {
-  for (auto &triangle : triangles) {
-    for (auto &vertex : triangle) {
-      auto &vector = vertex.gl_Position;
-      if (vector.w == 0) { continue; }
-      vector.x /= vector.w;
-      vector.y /= vector.w;
-      vector.z /= vector.w;
-    }
-  }
+void GPU::perspectiveDivision(OutVertex &vertex) {
+  auto &vector = vertex.gl_Position;
+  if (vector.w == 0) { return; }
+  vector.x /= vector.w;
+  vector.y /= vector.w;
+  vector.z /= vector.w;
 }
 
 // Transform NDC values to screen space
-void GPU::viewportTransformation() {
-  for (auto &triangle : triangles) {
-    for (auto &vertex : triangle) {
-      auto &vector = vertex.gl_Position;
-      vector.x *= frameBuffer.width  / 2;
-      vector.y *= frameBuffer.height / 2;
-      vector.x += frameBuffer.width  / 2;
-      vector.y += frameBuffer.height / 2;
-    }
-  }
+void GPU::viewportTransformation(OutVertex &vertex) {
+  auto &vector = vertex.gl_Position;
+  vector.x *= frameBuffer.width  / 2;
+  vector.y *= frameBuffer.height / 2;
+  vector.x += frameBuffer.width  / 2;
+  vector.y += frameBuffer.height / 2;
 }
 
 // Rasterize triangle in screen space
 void GPU::rasterization() {
-  for (auto triangle : triangles) {
+  for (auto &triangle : triangles) {
     int width = frameBuffer.width;
     int height = frameBuffer.height;
     float xmin = width;
     float xmax = 0;
     float ymin = height;
     float ymax = 0;
-    for (auto vertex : triangle) {
+    for (auto &vertex : triangle) {
+      perspectiveDivision(vertex);
+      viewportTransformation(vertex);
+
       auto vector = vertex.gl_Position;
       if (vector.x < xmin) {
         xmin = clamp(vector.x, 0, width);
@@ -838,22 +855,23 @@ void GPU::rasterization() {
 
     for (size_t y = ymin; y < ymax; y++) {
       for (size_t x = xmin; x < xmax; x++) {
-        glm::vec2 pixel;
-        pixel.x = x + 0.5f;
-        pixel.y = y + 0.5f;
+        glm::vec2 pixel = {x + 0.5f, y + 0.5f};
         pinedaTriangle(triangle, pixel);
       }
     }
   }
 }
 
+float GPU::clamp(float x, float min, float max) {
+  return std::min(std::max(x, min), max);
+}
 
 /* Helper functions for DrawTriangles functions */
 
 void GPU::pinedaTriangle(Triangle triangle, glm::vec2 p) {
-  auto vertex0 = triangle.at(0);
-  auto vertex1 = triangle.at(1);
-  auto vertex2 = triangle.at(2);
+  OutVertex vertex0 = triangle.at(0);
+  OutVertex vertex1 = triangle.at(1);
+  OutVertex vertex2 = triangle.at(2);
   auto V0 = vertex0.gl_Position;
   auto V1 = vertex1.gl_Position;
   auto V2 = vertex2.gl_Position;
@@ -875,22 +893,25 @@ void GPU::pinedaTriangle(Triangle triangle, glm::vec2 p) {
     InFragment inFragment;
     inFragment.gl_FragCoord.x = p.x;
     inFragment.gl_FragCoord.y = p.y;
+    inFragment.gl_FragCoord.z = 0;
     interpolate(inFragment, vertex0, vertex1, vertex2, w0, w1, w2);
 
     // Fragment Procesor
     OutFragment outFragment;
     fragmentProcessor(outFragment, inFragment);
 
-    if (inFragment.gl_FragCoord.z < getDepth((int) p.x, (int) p.y)) {
-      // get color
-      uint8_t r = (uint8_t) (clamp(outFragment.gl_FragColor.r, 0, 1) * 255);
-      uint8_t g = (uint8_t) (clamp(outFragment.gl_FragColor.g, 0, 1) * 255);
-      uint8_t b = (uint8_t) (clamp(outFragment.gl_FragColor.b, 0, 1) * 255);
-      uint8_t a = (uint8_t) (clamp(outFragment.gl_FragColor.a, 0, 1) * 255);
-      putPixel({r, g, b, a}, (int) p.x, (int) p.y);
-      if (inFragment.gl_FragCoord.z == -1.f) {
+    if (frameBuffer.depthBuffer != nullptr && frameBuffer.colorBuffer != nullptr) {
+      if (inFragment.gl_FragCoord.z < getDepth((int) p.x, (int) p.y)) {
+        // get color
+        uint8_t r = (uint8_t) (clamp(outFragment.gl_FragColor.r, 0.f, 1.f) * 255);
+        uint8_t g = (uint8_t) (clamp(outFragment.gl_FragColor.g, 0.f, 1.f) * 255);
+        uint8_t b = (uint8_t) (clamp(outFragment.gl_FragColor.b, 0.f, 1.f) * 255);
+        uint8_t a = (uint8_t) (clamp(outFragment.gl_FragColor.a, 0.f, 1.f) * 255);
+        putPixel({r, g, b, a}, (int) p.x, (int) p.y);
+        if (inFragment.gl_FragCoord.z == -1.f) {
+        }
+        putDepth(inFragment.gl_FragCoord.z, (int) p.x, (int) p.y);
       }
-      putDepth(inFragment.gl_FragCoord.z, (int) p.x, (int) p.y);
     }
   }
 }
@@ -975,13 +996,13 @@ GPU::RGBA GPU::getPixel(int x, int y) {
 }
 
 void GPU::putDepth(float depth, int x, int y) {
-  if (x >= 0 && y >- 0 && x < frameBuffer.width && y < frameBuffer.height) {
+  if (x >= 0 && y >= 0 && x < frameBuffer.width && y < frameBuffer.height) {
     frameBuffer.depthBuffer[y * frameBuffer.width + x] = depth;
   }
 }
 
 float GPU::getDepth(int x, int y) {
-  if (x >= 0 && y >- 0 && x < frameBuffer.width && y < frameBuffer.height) {
+  if (x >= 0 && y >= 0 && x < frameBuffer.width && y < frameBuffer.height) {
     return frameBuffer.depthBuffer[y * frameBuffer.width + x];
   } else {
     return 0;
